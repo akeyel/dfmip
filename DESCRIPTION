@@ -1,0 +1,35 @@
+Package: dfmip
+Type: Package
+Title: Disease Forecast Model Intercomparison Project
+Version: 0.1.0
+Author: Alexander C Keyel <akeyel@albany.edu>
+        MLE_IR.R from Williams & Moffitt 2005
+Maintainer: Alexander Keyel <akeyel@albany.edu>
+Description: A simple, consistent interface to multiple
+    disease forecasting models. It is currently configured to give estimates of
+    human cases from the ArboMAP model and a Random Forest model.
+    This package was developed by Alexander Keyel, Wadsworth Center, New York
+    State Department of Health, Albany, NY, USA. The code development was
+    supported by cooperative agreement 1U01CK000509-01, funded by the Centers
+    for Disease Control and Prevention. Its contents are solely the
+    responsibility of the author and do not necessarily represent the official
+    views of the Centers for Disease Control and Prevention or the Department of
+    Health and Human Services. See README.docx for more details. The MLE_IR.R
+    file was modified with permission from Williams & Moffitt 2005. Estimation
+    of pathogen prevalence in pooled samples using maximum likelihood methods
+    and open source software. Journal of Aquatic Animal Health 17: 386 - 391.
+    Original source code from Williams and Moffitt 2005 is available here:
+    https://www.tandfonline.com/doi/suppl/10.1577/H04-
+    066.1/suppl_file/uahh_a_10264377_sup_0001.txt
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Imports:
+	caret,
+	dplyr,
+	randomForest,
+	psych,
+Suggests:
+	ArboMAP
+RoxygenNote: 6.1.1
+
