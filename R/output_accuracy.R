@@ -1,14 +1,18 @@
 #' Output accuracy assessment
-#' 
+#'
 #' This R file is designed to compile the accuracy assessments for dfmip
 #' in order to provide a standardized format across forecast models
-#' 
+#'
+#'@name Output_accuracy_assessment
 NULL
 
 # List package imports here. Wherever possible, do not reinvent the wheel
 # #' @import randomForest
-#' @importFrom scoringRules crps_sample
-#' @importFrom caret RMSE
+# #' @importFrom caret RMSE #**# Apparently RMSE is not an exported function from caret.
+# #' @importFrom scoringRules crps_sample #**# Apparently crps_sample is not an exported function
+#' @import caret
+#' @import scoringRules
+NULL
 
 #' Assess Accuracy
 #'
@@ -32,8 +36,8 @@ NULL
 #' \item positive_pools_binary
 #' \item peak_timing }
 #'@param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.
-#'@param percentage For continuous and discrete forecasts, if the prediction is wihtin the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25% of the observed. 
-#' 
+#'@param percentage For continuous and discrete forecasts, if the prediction is wihtin the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25% of the observed.
+#'
 #'@return accuracy.metrics A list containing accuracy information. The list is
 #'   structured \tabular{ll}{
 #'   RMSE \tab Root Mean Squared Error\cr
@@ -46,14 +50,15 @@ NULL
 #'
 #' @examples
 #' assess.accuracy(predictions.mat = matrix(rnorm(1000, 8, 1), ncol = 1), observations.vec = rnorm(1000, 8, 1), forecast.target = "seasonal_mosquito_MLE")
-#'         
+#'
+#' @export assess.accuracy
 assess.accuracy = function(predictions.mat, observations.vec, forecast.target, threshold = 'default', percentage = 'default'){
 
   # List of potential options #**# UPDATE DOCUMENTATION WITH THESE
   #forecast.targets = c("human_cases", "human_incidence", "seasonal_mosquito_MLE",
   #                     "peak_mosquito_MLE", "number_positive_pools",
   #                     "human_cases_binary", "positive_pools_binary", "peak_timing")
-  
+
   # Set up vectors of forecasting targets
   binary.targets = c("human_cases_binary" , "positive_pools_binary")
   continuous.targets = c("human_incidence", "seasonal_mosquito_MLE", "peak_mosquito_MLE")
@@ -64,7 +69,7 @@ assess.accuracy = function(predictions.mat, observations.vec, forecast.target, t
   if (!forecast.target %in% forecast.targets){
     stop(sprintf("%s is not a valid forecast target. Valid options are %s.", forecast.target, paste(forecast.targets, collapse = ', ')))
   }
-      
+
   accuracy.metrics = list(CRPS = NA, RMSE = NA, Scaled_RMSE = NA, within_percentage = NA,
                           within_threshold = NA, within_threshold_or_percentage = NA, AUC = NA)
 
@@ -72,12 +77,12 @@ assess.accuracy = function(predictions.mat, observations.vec, forecast.target, t
   t.and.p = setup.t.p.defaults(forecast.target, threshold, percentage)
   threshold = t.and.p[[1]]
   percentage = t.and.p[[2]]
-  
+
   # If forecast target is binary
   if (forecast.target %in% binary.targets){
     # Update AUC
     stop("BINARY FORECASTS ARE NOT YET SUPPORTED")
-    
+
   }
 
   # If forecast target is continuous
@@ -92,62 +97,62 @@ assess.accuracy = function(predictions.mat, observations.vec, forecast.target, t
     # Update RMSE, scaled RMSE, percentage, threshold, threshold & percentage, CRPS
     accuracy.metrics = update.continuous.targets(accuracy.metrics, predictions.mat, observations.vec, threshold, percentage)
   }
-    
+
   # If forecast target is a time interval
   if (forecast.target %in% time.targets){
     # update threshold
     accuracy.metrics = update.time.targets(accuracy.metrics, predictions.mat, observations.vec, threshold)
-    
+
   }
-  
+
   return(accuracy.metrics)
 }
 
 #' Set up threshold and percentage defaults
-#' 
+#'
 #' Simple function to configure the defaults based on the type of input
-#' 
+#'
 setup.t.p.defaults = function(forecast.target, threshold, percentage,
                               binary.targets, continuous.targets,
                               discrete.targets, time.targets){
-  
+
   if (!forecast.target %in% c(binary.targets, continuous.targets, discrete.targets, time.targets)){
     stop("Incorrect forecast.target specified")
   }
-  
+
   # Set up threshold defaults
   if (threshold == "default"){
     # If forecast target is binary
     if (forecast.target %in% binary.targets){  threshold = NA  }
-    
+
     # If forecast target is continuous
     if (forecast.target %in% continuous.targets){ threshold = 0  }
-    
+
     if (forecast.target %in% discrete.targets){  threshold = 1  }
-    
+
     # If forecast target is a time interval (in days)
     if (forecast.target %in% time.targets){ threshold = 7  }
   }
-  
+
   # Set up percentage defaults
   if (percentage == "default"){
     if (forecast.target %in% binary.targets){ percentage = NA  }
-    
+
     # If forecast target is continuous
     if (forecast.target %in% continuous.targets){ percentage = 0.25  }
-    
+
     if (forecast.target %in% discrete.targets){ percentage = 0.25  }
-    
+
     # If forecast target is a time interval
     if (forecast.target %in% time.targets){ percentage = NA  }
-    
+
   }
 
-  return(list(threshold, percentage))  
+  return(list(threshold, percentage))
 }
 
 #' Update the continuous accuracy targets
-#' 
+#'
 #' @param accuracy.metrics A list containing accuracy information. The list is
 #'   structured \tabular{ll}{
 #'   RMSE \tab Root Mean Squared Error\cr
@@ -165,25 +170,25 @@ setup.t.p.defaults = function(forecast.target, threshold, percentage,
 #'  categories.
 #' @param observations.vec A vector where each entry corresponds to the observed outcome for the corresponding row in predictions.mat.
 #' @param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.
-#' @param percentage For continuous and discrete forecasts, if the prediction is wihtin the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25% of the observed. 
-#' 
+#' @param percentage For continuous and discrete forecasts, if the prediction is wihtin the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25% of the observed.
+#'
 #' @return accuracy.metrics An updated accuracy.metrics object
-#' 
+#'
 update.continuous.targets = function(accuracy.metrics, predictions.mat, observations.vec, threshold, percentage){
   #**# SCRIPT PIECES
 
   predictions.vec = apply(predictions.mat, 1, mean, na.rm = TRUE)
-  
+
   #results.df = data.frame(PREDICTION = predictions.vec, OBSERVATION = observations.vec)
-  
+
   # Update RMSE
   #RMSE.vec = RMSE(predictions.vec, observations.vec, na.rm = TRUE)
   #results.df$RMSE = RMSE.vec
   accuracy.metrics$RMSE = caret::RMSE(predictions.vec, observations.vec, na.rm = TRUE)
-  
+
   # Update Scaled RMSE (divided by mean - goal is to put the error in the context of the potential for variation)
   accuracy.metrics$Scaled_RMSE = accuracy.metrics$RMSE / mean(observations.vec, na.rm = TRUE)
-  
+
   # Update percentage score
   percent.errors = predictions.vec / observations.vec
   correct.index = percent.errors < (percentage + 1) & percent.errors > (1 - percentage)
@@ -191,7 +196,7 @@ update.continuous.targets = function(accuracy.metrics, predictions.mat, observat
   correct.vec[correct.index] = 1
   accuracy.score = sum(correct.vec, na.rm = TRUE) / length(correct.vec)
   accuracy.metrics$within_percentage = accuracy.score
-  
+
   # Update threshold score
   threshold.errors = abs(predictions.vec - observations.vec)
   t.correct.index = threshold.errors <= threshold
@@ -199,12 +204,12 @@ update.continuous.targets = function(accuracy.metrics, predictions.mat, observat
   t.correct.vec[t.correct.index] = 1
   t.accuracy.score = sum(t.correct.vec, na.rm = TRUE) / length(t.correct.vec)
   accuracy.metrics$within_threshold = t.accuracy.score
-  
+
   # Update threshold & percentage scores
   t.p.correct.index = t.correct.index | correct.index
   t.p.accuracy.score = sum(t.p.correct.index) / length(t.p.correct.index) #**# This should be more concise - TRUE = 1, FALSE = 0.
   accuracy.metrics$within_threshold_or_percentage = t.p.accuracy.score
-  
+
   # Update CRPS
   crps.vec = c()
   for (i in 1:length(observations.vec)){
@@ -214,13 +219,13 @@ update.continuous.targets = function(accuracy.metrics, predictions.mat, observat
     crps.vec = c(crps.vec, crps)
   }
   accuracy.metrics$CRPS = mean(crps.vec, na.rm = TRUE)
-  
+
   return(accuracy.metrics)
   #return(list(accuracy.metrics, results.df))
 }
 
 #' Update the continuous accuracy targets
-#' 
+#'
 #' @param accuracy.metrics A list containing accuracy information. The list is
 #'   structured \tabular{ll}{
 #'   RMSE \tab Root Mean Squared Error\cr
@@ -238,17 +243,17 @@ update.continuous.targets = function(accuracy.metrics, predictions.mat, observat
 #'  categories.
 #' @param observations.vec A vector where each entry corresponds to the observed outcome for the corresponding row in predictions.mat.
 #' @param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.
-#' 
+#'
 #' @return accuracy.metrics An updated accuracy.metrics object
-#' 
+#'
 update.time.targets = function(accuracy.metrics, predictions.mat, observations.vec, threshold){
   #**# SCRIPT PIECES
-  
+
   predictions.vec = apply(predictions.mat, 1, mean, na.rm = TRUE)
-  
+
   # Update RMSE
   accuracy.metrics$RMSE = caret::RMSE(predictions.vec, observations.vec, na.rm = TRUE)
-  
+
   # Update threshold score
   threshold.errors = abs(predictions.vec - observations.vec)
   t.correct.index = threshold.errors <= threshold
@@ -256,7 +261,7 @@ update.time.targets = function(accuracy.metrics, predictions.mat, observations.v
   t.correct.vec[t.correct.index] = 1
   t.accuracy.score = sum(t.correct.vec, na.rm = TRUE) / length(t.correct.vec)
   accuracy.metrics$within_threshold = t.accuracy.score
-  
+
   # Update CRPS
   crps.vec = c()
   for (i in 1:length(observations.vec)){
@@ -266,38 +271,38 @@ update.time.targets = function(accuracy.metrics, predictions.mat, observations.v
     crps.vec = c(crps.vec, crps)
   }
   accuracy.metrics$CRPS = mean(crps.vec, na.rm = TRUE)
-  
+
   return(accuracy.metrics)
 }
 
 ### JUNK BELOW HERE ###
-#' Generate test data 
-#' 
+#' Generate test data
+#'
 #' NOT USED, NOT CALLED. JUNK FUNCTION INITIALLY INTENDED TO HELP WITH SIMULATED DATA AND TESTING
-#' 
+#'
 generate.test.data = function(forecast.target, distribution, sample.size){
-  
+
   # For reference
   #forecast.targets = c("human_cases", "human_incidence", "seasonal_mosquito_MLE",
   #                     "peak_mosquito_MLE", "number_positive_pools",
   #                     "human_cases_binary", "positive_pools_binary", "peak_timing")
-  
+
   continuous.targets = c("human_incidence", "seasonal_mosquito_MLE", "peak_mosquito_MLE")
   if (!forecast.target %in% continuous.targets){
     stop(sprintf("Test data support for %s has not yet been scripted", forecast.target))
   }
-  
+
   if (forecast.target %in% continuous.targets){
     if (distribution == "normal"){
       predictions.vec = rnorm(sample.size, 4, 1)
       observations.vec = rnorm(sample.size, 4, 1)
-      
+
       # Remove impossible observations
       predictions.vec[predictions.vec < 0] = 0
       observations.vec[observations.vec < 0] = 0
     }
   }
-  
+
   return(list(predictions.vec, observations.vec))
 }
 

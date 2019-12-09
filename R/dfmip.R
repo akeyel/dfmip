@@ -45,10 +45,10 @@ NULL
 #'
 #' @param models.to.run A string vector of the models to run. Options are: \tabular{ll}{
 #' NULL.MODELS \tab Forecasts based on statewide incidence\cr
-#' ArboMAP \tab Development version ArboMAP forecasts, see details section.
-#' \item ArboMAP.MOD Modified version of ArboMAP model.
-#' \item RF1_C Random Forest model, climate inputs only (i.e. equivalent inputs to ArboMAP)
-#' \item RF1_A Random Forest model, all available inputs  }
+#' ArboMAP \tab Development version ArboMAP forecasts, see details section.\cr
+#' ArboMAP.MOD \tab Modified version of ArboMAP model.\cr
+#' RF1_C \tab Random Forest model, climate inputs only (i.e. equivalent inputs to ArboMAP).\cr
+#' RF1_A \tab Random Forest model, all available inputs.\cr  }
 #' Note these entries are case-sensitive and are run by keyword, so run in a fixed order (NULL.MODELS, ArboMAP, ArbMAP.MOD, RF1_C, RF1_A),
 #' regardless of the order specified in the models.to.run vector.
 #' @param human.data Data on human cases of the disease. Must be formatted with two columns: district and date. The district column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case.
@@ -72,7 +72,7 @@ NULL
 #' return a list. The first list entry contains the mosquito results, the second contains the human results.
 #' See Random Forest 1 Model outputs (below) for details
 #'
-#' @export run.dfmip
+#' @export dfmip.forecast
 dfmip.forecast = function(models.to.run, human.data, mosq.data,
                      weather.data, districtshapefile, weekinquestion, week.id,
                      results.path, arbo.inputs = 'none', observed.inputs = 'none',
@@ -2059,7 +2059,7 @@ check.dependencies = function(model.name, packages){
 #'
 #'@return A list containing a vector of numeric months and a vector with numeric days of the months
 #'
-#'@example
+#'@examples
 #' month.day.vecs = create.month.day.vecs(2000)
 #' month.day.vecs = create.month.day.vecs(2012)
 #' month.day.vecs = create.month.day.vecs(2013)
@@ -2068,6 +2068,7 @@ check.dependencies = function(model.name, packages){
 #' month.day.vecs = create.month.day.vecs(2016)
 #' month.day.vecs = create.month.day.vecs(2020)
 #'
+#'@export create.month.day.vecs
 create.month.day.vecs = function(year){
 
   if (year <= 1900 | year >= 2100){

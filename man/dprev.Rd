@@ -19,10 +19,15 @@ mosquitoes were in each negative pool}
 95% confidence interval}
 }
 \description{
-Function used to calculate infection rates
+Calculate mosquito infection rates
 }
 \details{
 Citation: C. Williams and C. Moffitt 2005. Estimation of pathogen
 prevalence in pooled samples using maximum likelihood methods and
 open source software. Journal of Aquatic Animal Health 17: 386 - 391
+}
+\examples{
+dprev(y = c(15), n = c(15,15,16))
+dprev(c(5,10), c(5))
+
 }

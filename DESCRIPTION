@@ -29,6 +29,7 @@ Imports:
 	dplyr,
 	randomForest,
 	psych,
+	scoringRules
 Suggests:
 	ArboMAP
 RoxygenNote: 6.1.1

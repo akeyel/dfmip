@@ -1,6 +1,6 @@
 #' Calculate Maximum Likelihood Estimate of Infection Rate using R
 #'
-#' @description Calculate the MLE using the dprev function
+#' Calculate the MLE using the dprev function
 #'
 #' @author C. Williams <chrisw at uidaho.edu> and C. Moffitt <cmoffitt at uidaho.edu>
 #'
@@ -17,12 +17,13 @@ NULL
 
 #' llprevr
 #'
-#' @description Internal function used in calculating infection rate
+#' Internal function used in calculating infection rate
 #'
 #' @details Citation: C. Williams and C. Moffitt 2005. Estimation of pathogen
 #' prevalence in pooled samples using maximum likelihood methods and
 #' open source software. Journal of Aquatic Animal Health 17: 386 - 391
 #'
+#' @name llprevr
 llprevr <- function(p, yes = c(0), no = c(0)){
 
   sumcheck <- sum(yes) + sum(no)
@@ -39,7 +40,7 @@ llprevr <- function(p, yes = c(0), no = c(0)){
 
 #' dprev
 #'
-#' @description Function used to calculate infection rates
+#' Calculate mosquito infection rates
 #'
 #' @details Citation: C. Williams and C. Moffitt 2005. Estimation of pathogen
 #' prevalence in pooled samples using maximum likelihood methods and
@@ -52,6 +53,10 @@ llprevr <- function(p, yes = c(0), no = c(0)){
 #' @param disp 'y' indicates to print results to dipslay
 #' @param conf The confidence interval to return. Default is 0.95 to yield a
 #' 95% confidence interval
+#'
+#' @examples
+#' dprev(y = c(15), n = c(15,15,16))
+#' dprev(c(5,10), c(5))
 #'
 #' @export dprev
 dprev <- function(yes = c(0),no = c(0),disp = 'y',conf = .95){
@@ -131,9 +136,5 @@ dprev <- function(yes = c(0),no = c(0),disp = 'y',conf = .95){
 }
 
 # Test Example to show how the function works
-#dprev(y = c(15), n = c(15,15,16))
 #
 #
-#group1.pos = c(5,10)
-#group1.neg = c(5)
-#dprev(group1.pos, group1.neg)
