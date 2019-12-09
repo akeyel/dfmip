@@ -58,6 +58,10 @@ llprevr <- function(p, yes = c(0), no = c(0)){
 #' dprev(y = c(15), n = c(15,15,16))
 #' dprev(c(5,10), c(5))
 #'
+#' @examples
+#' dprev(y = c(15), n = c(15,15,16))
+#' dprev(c(5,10), c(5))
+#'
 #' @export dprev
 dprev <- function(yes = c(0),no = c(0),disp = 'y',conf = .95){
 

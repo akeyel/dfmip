@@ -30,4 +30,7 @@ open source software. Journal of Aquatic Animal Health 17: 386 - 391
 dprev(y = c(15), n = c(15,15,16))
 dprev(c(5,10), c(5))
 
+dprev(y = c(15), n = c(15,15,16))
+dprev(c(5,10), c(5))
+
 }
