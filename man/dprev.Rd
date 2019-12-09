@@ -16,13 +16,18 @@ mosquitoes were in each negative pool}
 \item{disp}{'y' indicates to print results to dipslay}
 
 \item{conf}{The confidence interval to return. Default is 0.95 to yield a
-95% confidence interval}
+95 percent confidence interval}
 }
 \description{
-Function used to calculate infection rates
+Calculate mosquito infection rates
 }
 \details{
 Citation: C. Williams and C. Moffitt 2005. Estimation of pathogen
 prevalence in pooled samples using maximum likelihood methods and
 open source software. Journal of Aquatic Animal Health 17: 386 - 391
+}
+\examples{
+dprev(y = c(15), n = c(15,15,16))
+dprev(c(5,10), c(5))
+
 }

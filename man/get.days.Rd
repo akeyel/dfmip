@@ -2,10 +2,10 @@
 % Please edit documentation in R/dfmip.R
 \name{get.days}
 \alias{get.days}
-\title{Function to get number of days in a year}
+\title{Function to get number of days in a year (copied from wnv_hlpr.R)}
 \usage{
 get.days(year)
 }
 \description{
-Function to get number of days in a year
+Function to get number of days in a year (copied from wnv_hlpr.R)
 }
