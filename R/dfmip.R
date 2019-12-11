@@ -82,6 +82,10 @@ dfmip.forecast = function(models.to.run, human.data, mosq.data,
   forecasts.df = NA
   #message(paste(observed.inputs, collapse = ", "))
 
+  # Initialize the forecast distributions object
+  #**# This still needs to be added
+  forecast.distributions = NA
+
   # Create an object to hold other model outputs
   other.outputs = list()
 
@@ -212,15 +216,15 @@ dfmip.forecast = function(models.to.run, human.data, mosq.data,
 
     # Create a new rf1.inputs object and clear any added inputs
     rf1.inputs.no.extras = rf1.inputs
-    rf1.inputs.no.extras[[1]] = c()
-    rf1.inputs.no.extras[[2]] = c()
+    rf1.inputs.no.extras[[1]] = NA
+    rf1.inputs.no.extras[[2]] = NA
 
     RF1.results = rf1(human.data, mosq.data, districtshapefile, weather.data,
                       weekinquestion, rf1.inputs.no.extras, rf1.results.path)
 
     RF1.results$model.name = "RF1_C"
     RF1.results$forecast.id = week.id
-    other.outputs$rf1 = RF1.results$other.results
+    other.outputs$rf1c = RF1.results$other.results
 
     forecasts.df = update.df(forecasts.df, RF1.results, observed.inputs)
   }
@@ -240,13 +244,14 @@ dfmip.forecast = function(models.to.run, human.data, mosq.data,
 
     RF1.results$model.name = "RF1_A"
     RF1.results$forecast.id = week.id
-    other.outputs$rf1 = RF1.results$other.results
+    other.outputs$rf1a = RF1.results$other.results
 
     forecasts.df = update.df(forecasts.df, RF1.results, observed.inputs)
+    #forecast.distributions = RF1.results$forecast.distribution
+    #forecast.distributions = update.distribution(forecast.distributions, RF1.results) #**# FUNCTION NEEDS SCRIPTING
   }
 
-
-  return(list(forecasts.df, other.outputs))
+  return(list(forecasts.df, forecast.distributions, other.outputs))
 }
 
 #' rf1.inputs
@@ -255,14 +260,14 @@ dfmip.forecast = function(models.to.run, human.data, mosq.data,
 #'
 #' @param files.to.add A vector of file names of other data sources to be
 #' included in the Random Forest model. If no additional data is to be added,
-#' this should be an empty vector (i.e. c())
+#' this should be an empty vector (i.e. c()) or NA.
 #' @param merge.type.vec A vector identifying how the files should be joined to
 #' the mosquito and human data. Options are spatial_temporal where merges will
 #' be performed on county and year (e.g., climate data); state_temporal where
 #' merges will be performed on state and year (e.g. BBS data at state level),
 #' and spatial, where merges will be performed on county only (e.g., landcover
 #' and census data). This must have the same length as files.to.add, and if no
-#' additional data is to be added, this should be an empty vector (i.e. c())
+#' additional data is to be added, this should be an empty vector (i.e. c()) or NA.
 #' @param analysis.counties A list of counties included in the analysis (this
 #' is for ensuring that a county and year that does not have a human case is
 #' treated as a 0)
@@ -272,7 +277,7 @@ dfmip.forecast = function(models.to.run, human.data, mosq.data,
 #' or year is missing.
 #' @param user.drop.vars A list of independent variables that should be
 #' excluded from the analysis. If no variables should be excluded, this should
-#' be an empty vector c()
+#' be an empty vector c() or NA.
 #' @param mosq.model The Random Forest model to use for forecasting mosquito
 #' infection rates. If this is to be fitted from the empirical data, this
 #' should be set to NA
@@ -319,11 +324,43 @@ NULL
 #'
 #' Generate hindcasts for a suite of models using common data inputs, and evaluate their accuracy using a standardized suite of validation metrics
 #'
-#'@export dfmip.hindcasts
-dfmip.hindcasts = function(models.to.run, focal.years, human.data, mosq.data,
-                           weather.data, districtshapefile, weekinquestion, week.id,
-                           results.path, arbo.inputs = 'none',
-                           population.df = 'none', rf1.inputs = 'none'){
+#' @param models.to.run A string vector of the models to run. Options are: \tabular{ll}{
+#' NULL.MODELS \tab Forecasts based on statewide incidence\cr
+#' ArboMAP \tab Development version ArboMAP forecasts, see details section.\cr
+#' ArboMAP.MOD \tab Modified version of ArboMAP model.\cr
+#' RF1_C \tab Random Forest model, climate inputs only (i.e. equivalent inputs to ArboMAP).\cr
+#' RF1_A \tab Random Forest model, all available inputs.\cr  }
+#' Note these entries are case-sensitive and are run by keyword, so run in a fixed order (NULL.MODELS, ArboMAP, ArbMAP.MOD, RF1_C, RF1_A),
+#' regardless of the order specified in the models.to.run vector.
+#' @param focal.years The years for which hindcasts will be made. Hindcasts will use all prior years as training data.
+#' @param hindcast.targets The quantities for which hindcasts are to be made. Options are: \itemize{
+#' \item human_cases
+#' \item human_incidence
+#' \item seasonal_mosquito_MLE
+#' \item peak_mosquito_MLE
+#' \item number_positive_pools
+#' \item human_cases_binary
+#' \item positive_pools_binary
+#' \item peak_timing }
+#' @param human.data Data on human cases of the disease. Must be formatted with two columns: district and date. The district column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case.
+#' #**# WHAT IF THESE DATA ARE MISSING? I.E. just making a mosquito forecast with RF1?
+#' #**# Does the date need to be in a particular format? The sample data is "/" delimited.
+#' @param mosq.data Data on mosquito pools tested for the disease. Must be formatted with 4 columns: district (the spatial unit, e.g. county), col_date: the date the mosquitoes were tested, wnv_result: whether or not the pool was positive, pool_size: the number of mosquitoes tested in the pool. A fifth column species is optional but is not used by the code
+#' @param weather.data Data on weather variables to be included in the analysis. See the read.weather.data function for details about data format.
+#' The read.weather.data function from ArboMAP is a useful way to process one or more data files downloaded via Google Earth Engine.
+#' @param districtshapefile The shapefile with polygons representing the districts. #**# Are there required fields?
+#' @param results.path The base path in which to place the modeling results. Some models will create sub-folders for model specific results
+#' @param arbo.inputs Inputs specific to the ArboMAP model. If the ArboMAP model or ArboMAP.MOD model are not being run, this should be set to 'none' or omitted from the function call
+#' @param population.df Census information for calculating incidence. Can be set to 'none' or omitted from the function call #**# NEEDS FORMAT INSTRUCTIONS
+#' @param rf1.inputs Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}. If this model is not included, this should be set to 'none' or omitted from the function call #**# LINK TO AN OBJECT WITH MORE DETAILS
+#' @param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.
+#' @param percentage For continuous and discrete forecasts, if the prediction is wihtin the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.
+#'
+#' @export dfmip.hindcasts
+dfmip.hindcasts = function(models.to.run, focal.years, hindcast.targets, human.data, mosq.data,
+                           weather.data, districtshapefile, results.path, arbo.inputs = 'none',
+                           population.df = 'none', rf1.inputs = 'none', threshold = 'default',
+                           percentage = 'default'){
 
   first = 1
 
@@ -409,6 +446,10 @@ dfmip.hindcasts = function(models.to.run, focal.years, human.data, mosq.data,
       }
     }
   }
+
+  #**# LEFT OFF HERE
+  #**# NEED TO ADD ACCURACY ASSESSMENT
+
   #**# THROWING AWAY ALL THE OTHER MODEL RUN INFORMATION. WHAT OF IT DO WE WANT TO GET OUT? OR SHOULD IT BE SAVED TO FLAT FILE AND ACCESSED THAT WAY?
   return(forecasts.df)
 }
@@ -1304,13 +1345,13 @@ convert.env.data = function(weather.data, all.counties, season.breaks){
   weather.data = weather.data[weather.data$doy <= last.break, ]
 
   # Add grouping factor based on day of year
-  weather.data$breaks = sapply(weather.data$doy, assign.groups, season.breaks)
+  weather.data$wbreaks = sapply(weather.data$doy, assign.groups, season.breaks)
   weather.data$county_year = sprintf("%s_%s", weather.data$district, weather.data$year)
 
   # This looks like a job for dplyr; https://datacarpentry.org/dc_zurich/R-ecology/04-dplyr
   #**# This is hard-coded to specific variables. Can dplyr take a more general input?
   env.data.pre = weather.data %>%
-    group_by(county_year, breaks) %>%
+    group_by(county_year, wbreaks) %>%
     dplyr::summarize(TMINC = mean(tminc), TMEANC = mean(tmeanc), TMAXC = mean(tmaxc), PR = mean(pr),
                      RMEAN = mean(rmean), VPD = mean(vpd))
 
@@ -1322,12 +1363,12 @@ convert.env.data = function(weather.data, all.counties, season.breaks){
   # Add variables to the env.data data frame
   vars = c("TMINC", "TMEANC", "TMAXC", "PR", "RMEAN", "VPD") #**# HARD CODED, BECAUSE dplyr step is hard coded
   for (var in vars){
-    for (b in unique(env.data.pre$breaks)){
+    for (b in unique(env.data.pre$wbreaks)){
       this.var = sprintf("%s_%s", var, b)
       env.data[[this.var]] = rep(NA, nrow(env.data))
 
       # Subset data frame to just this break
-      env.data.subset = env.data.pre[env.data.pre$breaks == b, ]
+      env.data.subset = env.data.pre[env.data.pre$wbreaks == b, ]
       # Loop through subset and extract break values for this variable
       for (i in 1:nrow(env.data.subset)){
         county_year = env.data.subset$county_year[i]
@@ -1395,16 +1436,18 @@ add.rf1.inputs = function(env.data, rf1.inputs, breaks){
   # If other inputs are present, merge them in
   if (length(files.to.add) > 0){
 
-    # Check that files.to.add has same length as merge.type
-    if (length(files.to.add) != length(merge.type.vec)){  stop("files.to.add must have the same number of elements as merge.type.vec")  }
+    if(!is.na(files.to.add)){
+      # Check that files.to.add has same length as merge.type
+      if (length(files.to.add) != length(merge.type.vec)){  stop("files.to.add must have the same number of elements as merge.type.vec")  }
 
-    for (i in 1:length(files.to.add)){
-      # Add covariate information
-      this.file = files.to.add[i]
-      this.merge = merge.type.vec[i]
+      for (i in 1:length(files.to.add)){
+        # Add covariate information
+        this.file = files.to.add[i]
+        this.merge = merge.type.vec[i]
 
-      env.data = add.data(env.data, this.file, this.merge, breaks)
-      env.data = cleanup.garbage(env.data) #**# This step may need modification in the context of the changes made to dfmip
+        env.data = add.data(env.data, this.file, this.merge, breaks)
+        env.data = cleanup.garbage(env.data) #**# This step may need modification in the context of the changes made to dfmip
+      }
     }
   }
 

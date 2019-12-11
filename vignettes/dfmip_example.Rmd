@@ -1,0 +1,159 @@
+---
+title: "Disease Forecast Model Intercomparison Project Example"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Disease Forecast Model Intercomparison Project Example}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+
+## I. OVERVIEW
+
+### This vignette provides an example of how to run the dfmip package to create hindcasts and forecasts for simulated West Nile virus data. The simulated data set is freely available as part of the ArboMAP repository created by Justin Davis and Michael Wimberly under a GPL-3 license (original on www.github.com/ecograph, modified on www.github.com/akeyel/arbomap). This vignette also requires functions from the modified ArboMAP repository to run.
+
+### Hindcasts: Predictions for past data, where the observed result is already known
+
+### Forecasts: Predictions for future events, where the observed result is unknown
+
+## II. SET UP INPUTS
+
+First: Load the ArboMAP and dfmip packages. If they are not installed, they will be installed from GitHub
+
+```{r LoadPackages, echo = TRUE, message = FALSE}
+
+if (!require(ArboMAP)){
+  #install.packages("C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/CODE/ArboMAP/ArboMAP/ArboMAP_0.1.0.tar.gz", repos = NULL)
+  devtools::install_github("akeyel/ArboMAP/ArboMAP_package", ref = "package_test")
+  library(ArboMAP) # !require can't pull ArboMAP, so it will return a message "No Package called ArboMAP" because it looks for it on CRAN
+}
+if (!require(dfmip)){
+  #install.packages("C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/CODE/dfmip_0.1.0.tar.gz", repos = NULL)
+  devtools::install_github("akeyel/dfmip")
+  library(dfmip)
+}
+
+#**# For troubleshooting
+# devtools::reload('dfmip') # Must be in directory containing dfmip. This installs from a local directory, NOT github. #**# MAYBE NOT - still getting same error.
+# install.packages('C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/CODE/dfmip', repos = NULL, type = 'source')
+# # Restart R, but restore packages and objects (uses new versions of packages)
+# #.rs.restartR()
+
+```
+
+In this example, the data are pre-loaded into an RData object. Each of the objects can be read in from file, and example code for this can be found in the comments. The example code assumes the files/folders are in the ArboMAP directory following the ArboMAP structure (however this structure is not necessary, and any file can be reached by specifying the full path to the file). Note that the mosquito and human data used in this example are SIMULATED and do not correspond to real infection rates and cases. 
+
+```{r LoadData}
+
+example.inputs = "dfmip_example_inputs.RData"
+load(example.inputs)
+
+# Specify the models to run
+models.to.run = c("RF1_C","ArboMAP", "NULL")
+
+# # Load & compile weather data 
+# weatherpathstr = "weather data/"
+# weathersummaryfile = "weather data summary file.csv"
+# weather.data = ArboMAP::read.weather.data(weatherpathstr, weathersummaryfile) # Compile the weather data into an R object for the code
+# weather.data$district = ArboMAP::simplifynames(weather.data$district) # Convert the county names to match the mosquito and human data
+
+# Show format of weather data (first 5 rows)
+knitr::kable(weather.data[1:5, ])
+
+# Load human data
+# human.data.file = "human case data/simulated human case data.csv"
+# human.data = read.csv(human.data.file)
+# Show format of human data (first 5 rows)
+knitr::kable(human.data[1:5, ])
+
+
+# Load mosquito data
+# mosq.data.file = "mosquito data/simulated mosquito tests.csv"
+# mosq.data = read.csv(mosq.data.file)
+# Show format of mosquito data (first 5 rows)
+knitr::kable(mosq.data[1:5, ])
+
+# Read in Shapefile with district polygons
+# districtshapefile.file = "shapefile/cb_2014_us_county_5m - in EPSG 5070 - only SD.shp"
+
+# Load population data for calculation of incidence (optional)
+# population.df = NA # This optional input  is omitted in this vignette
+
+# Set up ArboMAP-specific inputs in the arbo.inputs object (if not using ArboMAP, arbo.inputs can be set to NA)
+#**# IMPROVE DOCUMENTATION HERE
+# stratafile.file = "strata/17-04-20 - classified strata - classic.csv"
+# stratafile = read.csv(stratafile.file) #**# WATCH FOR ERRORS ASSOCIATED WITH THIS
+# maxobservedhumandate = as.Date("2017-12-31", "%Y-%m-%d")
+# var1name = "tmeanc"
+# var2name = "vpd"
+# compyear1 = 2012
+# compyear2 = 2017
+# arbo.inputs = list(stratafile = stratafile, maxobservedhumandate = maxobservedhumandate, var1name = var1name, var2name = var2name,
+#                    compyear1 = compyear1, compyear2 = compyear2)
+
+
+# Set up Random Forest Model-specific inputs in the rf1.inputs object (if not using RF1, rf1.inputs can be set to NA)
+# No additional data layers will be input to the Random-Forest specific inputs will be used in this example, so this object will be relatively simple to set up.
+#**# Improve documentation here
+# analysis.counties = unique(read.csv(mosq.data)$district) # Get a list of counties for adding years with no human cases
+# analysis.years = seq(2004,2018) # Get a list of years for correcting for years with no human cases
+# files.to.add = c() # Needs to be an empty vector if there are no files to add
+# merge.type.vec = c()
+# user.drop.vars = c() # Additional variables from the environmental data to exclude from the analysis
+# mosq.model = human.model = NA # If a random forest model has already been fit, please enter the path here
+# analyze.mosquitoes = 1
+# analyze.humans = 1
+# rf1.inputs = list(files.to.add, merge.type.vec, analysis.counties, analysis.years, user.drop.vars, mosq.model, human.model,
+#                   analyze.mosquitoes, analyze.humans)
+
+# Code used to save the inputs once they are assembled 
+# example.inputs = "dfmip_example_inputs.RData"
+# save.image(file = example.inputs)
+
+
+```
+
+# III. GENERATE A FORECAST BASED ON HISTORICAL DATA
+
+```{r RunModel}
+
+# Specify forecast week
+weekinquestion = as.Date("2018-08-15", "%Y-%m-%d") #**# Is the as.Date part necessary?
+week.id = "test"
+results.path = "FORECAST_RESULTS/"
+
+models.to.run = c("RF1_C")
+dfmip.outputs = dfmip.forecast(models.to.run, human.data, mosq.data, weather.data,
+                          districtshapefile, weekinquestion, week.id, results.path,
+                          arbo.inputs = arbo.inputs, observed.inputs = observed.inputs,
+                          population.df = population.df, rf1.inputs = rf1.inputs)
+
+forecasts.df = dfmip.outputs[[1]]
+forecast.distributions = dfmip.outputs[[2]]
+other.results = dfmip.outputs[[3]]
+rf1.results = other.results$rf1
+#arbomap.results = other.results$arbomap.results #**# Are there other Arbomap results to output?
+```
+
+# IV. GENERATE HINDCASTS TO COMPARE MODELS
+```{r}
+# Set years for which hindcasts should be made
+focal.years = c(2015, 2016, 2017)
+
+# Set directory for results
+results.path = "HINDCAST_RESULTS/"
+
+# Define what should be hindcast
+hindcast.targets = c("human_cases", "seasonal_mosquito_MLE")
+
+# Remaining inputs were defined above
+hindcasts = dfmip.hindcasts(models.to.run, focal.years, hindcast.targets, human.data, mosq.data,
+                           weather.data, districtshapefile, weekinquestion, week.id,
+                           results.path, arbo.inputs = arbo.inputs,
+                          population.df = population.df, rf1.inputs = rf1.inputs,
+                          threshold = 1, percentage = 0.25)
+#**# NEED TO DEAL WITH forecast.targets
+# forecast.target = "human_cases"
+# accuracy.metrics = assess.accuracy(forecast.distributions, observations.vec, forecast.target)
+
+```
