@@ -355,13 +355,15 @@ NULL
 #' @param rf1.inputs Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}. If this model is not included, this should be set to 'none' or omitted from the function call #**# LINK TO AN OBJECT WITH MORE DETAILS
 #' @param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.
 #' @param percentage For continuous and discrete forecasts, if the prediction is wihtin the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.
+#' @param id.string An ID to include in the forecast ID for this hindcast run (e.g., state)
 #'
 #' @export dfmip.hindcasts
 dfmip.hindcasts = function(models.to.run, focal.years, hindcast.targets, human.data, mosq.data,
                            weather.data, districtshapefile, results.path, arbo.inputs = 'none',
                            population.df = 'none', rf1.inputs = 'none', threshold = 'default',
-                           percentage = 'default'){
+                           percentage = 'default', id.string = ""){
 
+  # Indicator to denote the first time through the loop
   first = 1
 
   # Run hindcast analysis for selected years
@@ -381,45 +383,52 @@ dfmip.hindcasts = function(models.to.run, focal.years, hindcast.targets, human.d
 
     year.vec = rep(year, length(month.vec))
 
-    #**# LEFT OFF HERE ON CODE CLEAN-UP
-
     # Other observed variables to consider calculating
     #mosq.data.year = mosq.data.all[mosq.data.all$year == year, ]
     #positive.districts = aggregate(mosq.data.year$wnv_result, by = list(mosq.data.year$district), max) # Max will be 1 if a district is positive, or 0 if it is negative
     #year.positive.districts = sum(positive.districts$x) #**# CHECK THAT THIS IS EQUIVALENT TO WHAT ARBOMAP IS ACTUALLY CALCULATING
     year.positive.districts = NA #**# THIS WAS NOT BEING CALCULATED CORRECTLY!
 
+    # Format data to ensure compatibility with code below
+    human.data$year = sapply(as.character(human.data$date), splitter,  "/", 3)
+    mosq.data$date = mosq.data$col_date
+
     # Calculate the observed human cases for the year
     # Human data is in format of one case per year, so nrow works the same as a sum
-    year.human.cases = nrow(human.data.all[human.data.all$year == year, ])
+    #**# This will fail if another date delimiter is used! Need to think about making it more general - can script a date.splitter function with grep and other tools to ensure the proper processing
+    year.human.cases = nrow(human.data[human.data$year == year, ])
+
 
     # Loop through weeks to get a new forecast for each week for ArboMAP
-    for (i in 1:length(month.vec)){
+    #for (i in 1:length(month.vec)){
+    #**# Just run twice for testing
+    for (i in 1:2){
 
       month = month.vec[i]
       day = day.vec[i]
       year = year.vec[i]
 
-      week.id = sprintf("%s_%04d-%02d-%02d", state, year, month, day)
+      week.id = sprintf("%s_%04d-%02d-%02d", string.id, year, month, day)
 
       # Update the observed inputs and predict this weeks' cases
       this.weeks.cases = NA #**# NOT SCRIPTED as this is not one of the key comparison outputs
 
-      #**# THIS NEEDS TO BE REFRAMED IN THE CONTEXT OF FORECAST TARGETS
-      observed.inputs = list(observed.positive.districts = year.positive.districts,
-                             observed.human.cases = year.human.cases,
-                             observed.weeks.cases = this.weeks.cases)
+      # #**# THIS NEEDS TO BE REFRAMED IN THE CONTEXT OF FORECAST TARGETS
+      # observed.inputs = list(observed.positive.districts = year.positive.districts,
+      #                       observed.human.cases = year.human.cases,
+      #                       observed.weeks.cases = this.weeks.cases)
 
       # Subset the human data object
-      human.data = date.subset(human.data.all, year, month, day, 2)
+      human.data.subset = human.data[human.data$year < year, ]
+      #**# Current year needs to be dropped for ArboMAP, but this may not be appropriate for other approaches. Need to re-address when this is an issue.
       #**# NOTE: the current year is dropped in this step. For the Random Forest analysis, it comes back with just 0's for cases, which is not correct, but allows the code to run and does not cause any errors (as those observations are not used for predictions or extracted as true observations)
       #**# This step would corrupt the data from the standpoint of Nick DeFelice's approach.
 
       # Subset the mosquito data object
-      mosq.data = date.subset(mosq.data.all, year, month, day, 2)
+      mosq.data.subset = date.subset(mosq.data, year, month, day, 2)
 
       # Subset the weather data object
-      weather.data = date.subset(weather.data.all, year, month, day, 1)
+      weather.data.subset = date.subset(weather.data, year, month, day, 1)
 
       # Run analysis for selected weeks
       in.date = sprintf("%s-%02d-%02d", year, month, day)
@@ -429,14 +438,16 @@ dfmip.hindcasts = function(models.to.run, focal.years, hindcast.targets, human.d
       # On first iteration, run the Random Forest model and NULL.MODELS (They can be run once as they do not update weekly)
       if (i == 1){ models.to.run = c(models.to.run, "RF1_C", "RF1_A", "NULL.MODELS")}
 
-      arbo.inputs = list(stratafile = stratafile, maxobservedhumandate = maxobservedhumandate, var1name = var1name, var2name = var2name,
-                         compyear1 = compyear1, compyear2 = compyear2)
+      # Update the max observed human date (but this should not be critical, as we have removed data from the current year)
+      #**# but a future version might make that change specific to ArboMAP
+      arbo.inputs[[2]] = maxobservedhumandate
 
-      out = dfmip.forecast(models.to.run, human.data, mosq.data, weather.data,
+      out = dfmip.forecast(models.to.run, human.data.subset, mosq.data.subset, weather.data.subset,
                       districtshapefile, weekinquestion, week.id, results.path,
-                      arbo.inputs = arbo.inputs, observed.inputs = observed.inputs,
-                      population.df = census.data.subset, rf1.inputs = rf1.inputs.no.extras)
+                      arbo.inputs, observed.inputs, population.df, rf1.inputs)
       out.forecasts = out[[1]]
+
+      #**# What am I getting out? How is it structured to be useful?
 
       if (first == 1){
         forecasts.df = out.forecasts
@@ -449,6 +460,7 @@ dfmip.hindcasts = function(models.to.run, focal.years, hindcast.targets, human.d
 
   #**# LEFT OFF HERE
   #**# NEED TO ADD ACCURACY ASSESSMENT
+  # # accuracy.metrics = assess.accuracy(forecast.distributions, observations.vec, forecast.target)
 
   #**# THROWING AWAY ALL THE OTHER MODEL RUN INFORMATION. WHAT OF IT DO WE WANT TO GET OUT? OR SHOULD IT BE SAVED TO FLAT FILE AND ACCESSED THAT WAY?
   return(forecasts.df)
@@ -523,6 +535,7 @@ update.df = function(forecasts.df, results.object, observed.inputs){
 #' To retain multiple pieces, do a separate function call for each piece
 #' @param as.string 0 Result will be numeric, 1 Result will be string
 #'
+#'@export splitter
 splitter = function(string, delimiter, position, as.string = 0){
   parts = strsplit(string, delimiter)[[1]]
   out = parts[position]
@@ -557,10 +570,11 @@ splitter2 = function(string, start, end){
 
 #' Restrict data to a single date
 #'
-#' df must have a column "date" in format YYYY-MM-DD
+#' df must have a column "date" in format YYYY-MM-DD (date.format = 1) or MM/DD/YYYY (date.format = 2)
 #' Note that the date format was slow for string operations, so a datestr field will be added
 #' df must have a column "year" in format YYYY
 #'
+#'@export date.subset
 date.subset = function(df, end.year, end.month, end.day, date.format){
 
   # Format for splitting out the weather data
