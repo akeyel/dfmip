@@ -122,8 +122,11 @@ weekinquestion = as.Date("2018-08-15", "%Y-%m-%d") #**# Is the as.Date part nece
 week.id = "test"
 results.path = "FORECAST_RESULTS/"
 
-models.to.run = c("RF1_C")
-dfmip.outputs = dfmip.forecast(models.to.run, human.data, mosq.data, weather.data,
+# Define what should be evaluated
+forecast.targets = c("annual.human.cases") #, "seasonal.mosquito.MLE")
+
+models.to.run = c("RF1_C","ArboMAP", "NULL")
+dfmip.outputs = dfmip.forecast(forecast.targets, models.to.run, human.data, mosq.data, weather.data,
                           districtshapefile, weekinquestion, week.id, results.path,
                           arbo.inputs = arbo.inputs, observed.inputs = observed.inputs,
                           population.df = population.df, rf1.inputs = rf1.inputs)
@@ -143,17 +146,14 @@ focal.years = c(2015, 2016, 2017)
 # Set directory for results
 results.path = "HINDCAST_RESULTS/"
 
-# Define what should be hindcast
-hindcast.targets = c("human_cases", "seasonal_mosquito_MLE")
-
 # Remaining inputs were defined above
-hindcasts = dfmip.hindcasts(models.to.run, focal.years, hindcast.targets, human.data, mosq.data,
-                           weather.data, districtshapefile, weekinquestion, week.id,
+hindcasts = dfmip.hindcasts(forecast.targets, models.to.run, focal.years, human.data, mosq.data,
+                           weather.data, districtshapefile,
                            results.path, arbo.inputs = arbo.inputs,
                           population.df = population.df, rf1.inputs = rf1.inputs,
-                          threshold = 1, percentage = 0.25)
-#**# NEED TO DEAL WITH forecast.targets
-# forecast.target = "human_cases"
-# accuracy.metrics = assess.accuracy(forecast.distributions, observations.vec, forecast.target)
+                          threshold = 1, percentage = 0.25, id.string = "test")
+
+
+
 
 ```

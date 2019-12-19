@@ -27,9 +27,9 @@ NULL
 #'  categories.
 #'@param observations.vec A vector where each entry corresponds to the observed outcome for the corresponding row in predictions.mat.
 #'@param forecast.target The quantity being forecast. Forecasts targets are: \itemize{
-#' \item human_cases
+#' \item annual.human.cases
 #' \item human_incidence
-#' \item seasonal_mosquito_MLE
+#' \item seasonal.mosquito.MLE
 #' \item peak_mosquito_MLE
 #' \item number_positive_pools
 #' \item human_cases_binary
@@ -49,20 +49,20 @@ NULL
 #'   }
 #'
 #' @examples
-#' assess.accuracy(predictions.mat = matrix(rnorm(1000, 8, 1), ncol = 1), observations.vec = rnorm(1000, 8, 1), forecast.target = "seasonal_mosquito_MLE")
+#' assess.accuracy(predictions.mat = matrix(rnorm(1000, 8, 1), ncol = 1), observations.vec = rnorm(1000, 8, 1), forecast.target = "seasonal.mosquito.MLE")
 #'
 #' @export assess.accuracy
 assess.accuracy = function(predictions.mat, observations.vec, forecast.target, threshold = 'default', percentage = 'default'){
 
   # List of potential options #**# UPDATE DOCUMENTATION WITH THESE
-  #forecast.targets = c("human_cases", "human_incidence", "seasonal_mosquito_MLE",
+  #forecast.targets = c("annual.human.cases", "human_incidence", "seasonal.mosquito.MLE",
   #                     "peak_mosquito_MLE", "number_positive_pools",
   #                     "human_cases_binary", "positive_pools_binary", "peak_timing")
 
   # Set up vectors of forecasting targets
   binary.targets = c("human_cases_binary" , "positive_pools_binary")
-  continuous.targets = c("human_incidence", "seasonal_mosquito_MLE", "peak_mosquito_MLE")
-  discrete.targets = c("human_cases", "number_positive_pools")
+  continuous.targets = c("annual.human.cases", "human_incidence", "seasonal.mosquito.MLE", "peak_mosquito_MLE")
+  discrete.targets = c("", "number_positive_pools")
   time.targets = c("peak_timing")
   forecast.targets = c(binary.targets, continuous.targets, discrete.targets, time.targets)
 
@@ -285,11 +285,11 @@ update.time.targets = function(accuracy.metrics, predictions.mat, observations.v
 generate.test.data = function(forecast.target, distribution, sample.size){
 
   # For reference
-  #forecast.targets = c("human_cases", "human_incidence", "seasonal_mosquito_MLE",
+  #forecast.targets = c("", "human_incidence", "seasonal.mosquito.MLE",
   #                     "peak_mosquito_MLE", "number_positive_pools",
   #                     "human_cases_binary", "positive_pools_binary", "peak_timing")
 
-  continuous.targets = c("human_incidence", "seasonal_mosquito_MLE", "peak_mosquito_MLE")
+  continuous.targets = c("human_incidence", "seasonal.mosquito.MLE", "peak_mosquito_MLE")
   if (!forecast.target %in% continuous.targets){
     stop(sprintf("Test data support for %s has not yet been scripted", forecast.target))
   }
