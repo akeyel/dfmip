@@ -33,12 +33,6 @@ if (!require(dfmip)){
   library(dfmip)
 }
 
-#**# For troubleshooting
-# devtools::reload('dfmip') # Must be in directory containing dfmip. This installs from a local directory, NOT github. #**# MAYBE NOT - still getting same error.
-# install.packages('C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/CODE/dfmip', repos = NULL, type = 'source')
-# # Restart R, but restore packages and objects (uses new versions of packages)
-# #.rs.restartR()
-
 ```
 
 In this example, the data are pre-loaded into an RData object. Each of the objects can be read in from file, and example code for this can be found in the comments. The example code assumes the files/folders are in the ArboMAP directory following the ArboMAP structure (however this structure is not necessary, and any file can be reached by specifying the full path to the file). Note that the mosquito and human data used in this example are SIMULATED and do not correspond to real infection rates and cases. 

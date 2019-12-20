@@ -31,8 +31,8 @@ Imports:
 	psych,
 	scoringRules
 Suggests:
-	ArboMAP,
-	knitr,
-	rmarkdown
+    ArboMAP,
+    knitr,
+    rmarkdown,
+    testthat (>= 2.1.0)
 RoxygenNote: 6.1.1
-

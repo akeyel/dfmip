@@ -81,6 +81,10 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
                      results.path, arbo.inputs = 'none', observed.inputs = 'none',
                      population.df = 'none', rf1.inputs = 'none'){
 
+  # Check that models to run are all valid model names
+  models.in.dfmip = c("NULL.MODELS", "ArboMAP", "ArboMAP.MOD", "RF1_C", "RF1_A")
+  check.models(models.to.run, models.in.dfmip)
+
   # Initialize the forecast object
   forecasts.df = NA
   #message(paste(observed.inputs, collapse = ", "))
@@ -104,7 +108,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     # Calculate total number of years
     n.years = length(seq(min(human.data$year), max(human.data$year)))
 
-    # Estimate mean cases per year and incidence
+    # Estimate mean cases per year
     mean.annual.cases = tot.cases / n.years
 
     # Estimate mean annual MLE
@@ -120,6 +124,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
       mean.seasonal.mosquito.MLE = mean(MLE.vec, na.rm = TRUE)
     }
 
+    # Estimate incidence
     if ("human.incidence" %in% forecast.targets){
       mean.incidence = mean.incidence.model(human.data, population.df, mean.annual.cases)
       incidence.per.year = mean.incidence[[1]]
@@ -150,7 +155,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
     # Initialize statewide results
     statewide.results = list()
-    statewide.results$model.name = "STATEWIDE.INCIDENCE"
+    statewide.results$model.name = "NULL.MODELS"
     statewide.results$forecast.id = week.id
     statewide.results$multiplier = NA #**# Should this be incidence?
     statewide.results$annual.human.cases = mean.annual.cases
@@ -158,11 +163,11 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     statewide.results$weeks.cases = weeks.cases
     statewide.results$seasonal.mosquito.MLE = NA #**# NEED TO SCRIPT
 
+    # Initialize statewide.distributions
+    statewide.distributions = list()
     statewide.distributions$annual.human.cases = mean.annual.cases #**# ALL WE NEED IS A SD AND WE COULD GIVE A NORMAL DISTRIBUTION HERE!
     statewide.distributions$seasonal.mosquito.MLE = NA #**# NEED TO SCRIPT THIS
-    message(str(statewide.results))
     forecast.distributions = update.distribution(forecast.targets, statewide.results$model.name, statewide.results$forecast.id, forecast.distributions, statewide.distributions)
-    message(str(forecast.distributions))
 
     # Initialize district-specific results
     district.results = list()
@@ -171,7 +176,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     district.results$multiplier = NA # Use incidence?
     #**# Add additional fields once this is supported
 
-    forecasts.df = update.df(forecasts.df, statewide.results)
+    forecasts.df = update.df(forecast.targets, forecasts.df, statewide.results)
     #**# Un-comment once district-specific results are supported by the code
     #forecasts.df = update.df(forecasts.df, district.results, observed.inputs)
 
@@ -209,7 +214,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
     # Set up distributions - currently just a single entry because ArboMAP does not produce probabilistic outputs
     ArboMAP.distributions = list()
-    ArboMAP.distributions$annual.human.cases = ArboMAP.results$human.cases
+    ArboMAP.distributions$annual.human.cases = ArboMAP.results$annual.human.cases
     ArboMAP.distributions$seasonal.mosquito.MLE = NA
 
     forecasts.df = update.df(forecast.targets, forecasts.df, ArboMAP.results)
@@ -241,7 +246,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     ArboMAP.results = ArboMAP(human.data, mosq.data, districtshapefile, stratafile, weather.data,
                               weathersummaryfile, maxobservedhumandate, weekinquestion,
                               var1name, var2name, compyear1, compyear2, results.path, original.metrics = 0)[[1]]
-    ArboMAP.results$model.name = "ArboMAP_MOD"
+    ArboMAP.results$model.name = "ArboMAP.MOD"
     ArboMAP.results$forecast.id = week.id
     ArboMAP.results$seasonal.mosquito.MLE = NA
 
@@ -540,7 +545,6 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
           forecasts.df = rbind(forecasts.df, out.forecasts)
 
           if ("annual.human.cases" %in% forecast.targets){
-            message(str(forecast.distributions))
             human.cases.list = forecast.distributions[['annual.human.cases']]
             human.cases.list = append(human.cases.list, out.distributions$annual.human.cases)
             forecast.distributions[['annual.human.cases']] = human.cases.list
@@ -561,7 +565,11 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
   # Loop through forecast targets
   for (i in 1:length(forecast.targets)){
     forecast.target = forecast.targets[i]
+    #message("Checking distributions that have been output")
+    #message(str(forecast.distributions))
+
     target.distributions = forecast.distributions[[forecast.target]]
+    #message(names(target.distributions))
 
     keys = names(target.distributions)
     models = sapply(keys, splitter, ':', 1, as.string = 1)
@@ -570,8 +578,14 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
     for (j in 1:length(models.to.run)){
       model = models.to.run[j]
 
+      model.regex = sprintf("\\b%s\\b", model) # Add breaks to search for ONLY the model, and not any that have the model as part of the name.
       # Get an index of which forecasts belong to this model
-      model.index = grep(model, models)
+      model.index = grep(model.regex, models)
+
+      # Check that model results were extracted. If not, throw an error, and present possible causes
+      if (length(model.index) == 0){
+        stop(sprintf("No results for %s model. Models included in the results are %s. Please check for a typo in the model names", model, paste(models, collapse = ', ')))
+      }
 
       observations.vec = c()
 
@@ -579,6 +593,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
       for (k in 1:length(model.index)){
         this.index.value = model.index[k]
         this.key = keys[this.index.value]
+        #message(this.key)
         this.distribution = target.distributions[[this.key]]
 
         this.key = as.character(this.key) # Ensure the key is in character format
@@ -587,14 +602,14 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
         this.year = splitter(this.date, '-', 1)
         this.year.key = sprintf("x%s", this.year)
 
-        message(model)
-        message(this.index.value)
-        message(this.key)
-        message(this.date)
-        message(forecast.target)
-        message(this.year.key)
-        message(str(observation.list))
-        message(paste(model.index, collapse = ',')) #**# IS model.index NA for soemthing?
+        #message(model)
+        #message(this.index.value)
+        #message(this.key)
+        #message(this.date)
+        #message(forecast.target)
+        #message(this.year.key)
+        #message(str(observation.list))
+        #message(paste(model.index, collapse = ',')) #**# IS model.index NA for soemthing?
         this.observation = observation.list[[forecast.target]][[this.year.key]]
 
         # Create/update a distributions matrix to hold values
@@ -2549,3 +2564,31 @@ test.type = function(vector, test.name){
     }
   }
 }
+
+
+#' Check models
+#'
+#' Check that the selected model names are supported by the dfmip code. Main aim is to catch minor typos, such as entering 'NULL' instead of 'NULL.MODELS'.
+#'
+#' @param models.to.run The list of models to be run
+#' @param models.in.dfmip The list of models scripted in dfmip, as a vector
+#'
+#' @return NONE: this function throws an error if something is wrong.
+check.models = function(models.to.run, models.in.dfmip){
+  model.error = 0
+  bad.names = c()
+  for (model in models.to.run){
+    if (!model %in% models.in.dfmip){
+      model.error = 1
+      bad.names = c(bad.names, model)
+    }
+  }
+  if (model.error == 1){
+    m1 = sprintf("The following entered model names are not supported by dfmip:\n%s\n",paste(bad.names, collape = ', '))
+    m2 = sprintf("The following names ARE supported:\n%s\n", paste(models.in.dfmip, collapse = ', '))
+    m3 = "Please check documentation and/or check for typos"
+    stop(sprintf("%s%s%s", m1,m2,m3))
+  }
+
+}
+
