@@ -1,7 +1,7 @@
 # When set to 0, the tests that take several minutes to run are skipped
 #0.8 s with Test_All = 0
-#XXXX s with Test_All = 1 #**# FILL IN TIME ESTIMATE
-Test_All = 0
+#796.1 s with Test_All = 1 #**# FILL IN TIME ESTIMATE
+Test_All = 2
 
 
 test_that("forecasting model names are correct", {
@@ -103,26 +103,6 @@ test_that("Date handling functions perform as expected", {
 
 })
 
-test_that("mosquito MLE estimates are calculated correctly",{
-
-  # Load example data to run the models (back out two directories to get into main package directory)
-  load("../../vignettes/dfmip_example_inputs.RData")
-  estimate = calculate.MLE.v2(mosq.data)
-  expect_equal(names(estimate), c("GROUP", "CI.lower", "CI.upper", "IR", "COUNTY", "abundance", "density", "YEAR", "county_year"))
-  expect_equal(round(estimate$CI.lower[1],5), 0.00059)
-  expect_equal(round(estimate$CI.upper[1],5), 0.01121)
-  expect_equal(round(estimate$IR[1],5), 0.00364)
-  expect_equal(nrow(estimate), 160)
-
-  expect_equal(round(estimate$IR[160], 4), 0.0014)
-
-  # Check that an informative error is given for a missing input
-  districts = mosq.data$district # Allows recovery of NULL field if further testing is required
-  mosq.data$district = NULL
-  expect_error(calculate.MLE.v2(mosq.data))
-
-})
-
 
 test_that("Update functions work properly", {
 
@@ -185,9 +165,36 @@ test_that("assorted small functions all work as expected", {
 
 })
 
+# Should be in rf1 package tests, but done here because then only one copy of the example data is needed.
+test_that("mosquito MLE estimates are calculated correctly",{
+
+  # Check that rf1 is installed
+  if(!require(rf1)){
+    skip('rf1 package must be installed to test MLE calculations. You can do this with devtools::install_github("akeyel/rf1")')
+  }
+
+  # Load example data to run the models (back out two directories to get into main package directory)
+  load("../../vignettes/dfmip_example_inputs.RData")
+  estimate = rf1::calculate.MLE.v2(mosq.data)
+  expect_equal(names(estimate), c("GROUP", "CI.lower", "CI.upper", "IR", "COUNTY", "abundance", "density", "YEAR", "county_year"))
+  expect_equal(round(estimate$CI.lower[1],5), 0.00059)
+  expect_equal(round(estimate$CI.upper[1],5), 0.01121)
+  expect_equal(round(estimate$IR[1],5), 0.00364)
+  expect_equal(nrow(estimate), 160)
+
+  expect_equal(round(estimate$IR[160], 4), 0.0014)
+
+  # Check that an informative error is given for a missing input
+  districts = mosq.data$district # Allows recovery of NULL field if further testing is required
+  mosq.data$district = NULL
+  expect_error(rf1::calculate.MLE.v2(mosq.data))
+
+})
+
+
 #**# SKIP THIS ON CRAN - THIS WILL TAKE A WHILE TO RUN
 test_that("ArboMAP model produces the expected outputs", {
-  if (Test_All == 0){
+  if (Test_All == 0 | Test_All == 2){
     skip("Skipped testing ArboMAP model to save time") #**# Enable when testing code other than the main functions
   }
 
@@ -259,7 +266,7 @@ test_that("ArboMAP model produces the expected outputs", {
 
 # Test NULL model
 test_that("NULL model produces the expected outputs", {
-  if (Test_All == 0){
+  if (Test_All == 0 | Test_All == 2){
     skip("Skipped NULL model tests to save time") #**# Enable when testing code other than the main functions
   }
 
