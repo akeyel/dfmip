@@ -1,2 +1,6 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+LICENSE.txt
+README.docx
+^doc$
+^Meta$

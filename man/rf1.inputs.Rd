@@ -6,7 +6,7 @@
 \arguments{
 \item{files.to.add}{A vector of file names of other data sources to be
 included in the Random Forest model. If no additional data is to be added,
-this should be an empty vector (i.e. c())}
+this should be an empty vector (i.e. c()) or NA.}
 
 \item{merge.type.vec}{A vector identifying how the files should be joined to
 the mosquito and human data. Options are spatial_temporal where merges will
@@ -14,7 +14,7 @@ be performed on county and year (e.g., climate data); state_temporal where
 merges will be performed on state and year (e.g. BBS data at state level),
 and spatial, where merges will be performed on county only (e.g., landcover
 and census data). This must have the same length as files.to.add, and if no
-additional data is to be added, this should be an empty vector (i.e. c())}
+additional data is to be added, this should be an empty vector (i.e. c()) or NA.}
 
 \item{analysis.counties}{A list of counties included in the analysis (this
 is for ensuring that a county and year that does not have a human case is
@@ -27,7 +27,7 @@ or year is missing.}
 
 \item{user.drop.vars}{A list of independent variables that should be
 excluded from the analysis. If no variables should be excluded, this should
-be an empty vector c()}
+be an empty vector c() or NA.}
 
 \item{mosq.model}{The Random Forest model to use for forecasting mosquito
 infection rates. If this is to be fitted from the empirical data, this

@@ -4,10 +4,67 @@
 \alias{dfmip.hindcasts}
 \title{DFMIP Hindcasts}
 \usage{
-dfmip.hindcasts(models.to.run, focal.years, human.data, mosq.data,
-  weather.data, districtshapefile, weekinquestion, week.id, results.path,
-  arbo.inputs = "none", population.df = "none", rf1.inputs = "none")
+dfmip.hindcasts(forecast.targets, models.to.run, focal.years, human.data,
+  mosq.data, weather.data, districtshapefile, results.path,
+  arbo.inputs = "none", population.df = "none", rf1.inputs = "none",
+  threshold = "default", percentage = "default", id.string = "",
+  season_start_month = 7, weeks_in_season = 2, sample_frequency = 1)
+}
+\arguments{
+\item{forecast.targets}{The quantities for which hindcasts are to be made. Options are: \tabular{ll}{
+annual.human.cases \tab Number of human cases\cr
+seasonal.mosquito.MLE \tab Mosquito infection rate maximum likelihood estimate averaged over the entire season\cr}}
+
+\item{models.to.run}{A string vector of the models to run. Options are: \tabular{ll}{
+NULL.MODELS \tab Forecasts based on statewide incidence\cr
+ArboMAP \tab Development version ArboMAP forecasts, see details section.\cr
+ArboMAP.MOD \tab Modified version of ArboMAP model.\cr
+RF1_C \tab Random Forest model, climate inputs only (i.e. equivalent inputs to ArboMAP).\cr
+RF1_A \tab Random Forest model, all available inputs.\cr  }
+Note these entries are case-sensitive and are run by keyword, so run in a fixed order (NULL.MODELS, ArboMAP, ArbMAP.MOD, RF1_C, RF1_A),
+regardless of the order specified in the models.to.run vector.}
+
+\item{focal.years}{The years for which hindcasts will be made. Hindcasts will use all prior years as training data.}
+
+\item{human.data}{Data on human cases of the disease. Must be formatted with two columns: district and date. The district column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case. The date column must be in format M/D/Y, with forward slashes as delimiters
+#**# WHAT IF THESE DATA ARE MISSING? I.E. just making a mosquito forecast with RF1?}
+
+\item{mosq.data}{Data on mosquito pools tested for the disease. Must be formatted with 4 columns: district (the spatial unit, e.g. county), col_date: the date the mosquitoes were tested, wnv_result: whether or not the pool was positive, pool_size: the number of mosquitoes tested in the pool. A fifth column species is optional but is not used by the code}
+
+\item{weather.data}{Data on weather variables to be included in the analysis. See the read.weather.data function for details about data format.
+The read.weather.data function from ArboMAP is a useful way to process one or more data files downloaded via Google Earth Engine.}
+
+\item{districtshapefile}{The shapefile with polygons representing the districts. #**# Are there required fields?}
+
+\item{results.path}{The base path in which to place the modeling results. Some models will create sub-folders for model specific results}
+
+\item{arbo.inputs}{Inputs specific to the ArboMAP model. If the ArboMAP model or ArboMAP.MOD model are not being run, this should be set to 'none' or omitted from the function call}
+
+\item{population.df}{Census information for calculating incidence. Can be set to 'none' or omitted from the function call #**# NEEDS FORMAT INSTRUCTIONS}
+
+\item{rf1.inputs}{Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}. If this model is not included, this should be set to 'none' or omitted from the function call #**# LINK TO AN OBJECT WITH MORE DETAILS}
+
+\item{threshold}{For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.}
+
+\item{percentage}{For continuous and discrete forecasts, if the prediction is wihtin the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.}
+
+\item{id.string}{An ID to include in the forecast ID for this hindcast run (e.g., state)}
+
+\item{season_start_month}{The first month of the mosquito season, as a number. E.g., July would be 7.}
+
+\item{weeks_in_season}{The number of weeks to sample}
+
+\item{sample_frequency}{How frequently sample (default, 1 = weekly) #**# Other options are not currently supported}
 }
 \description{
 Generate hindcasts for a suite of models using common data inputs, and evaluate their accuracy using a standardized suite of validation metrics
+}
+\details{
+Forecast targets not yet supported, but in development: \tabular{ll}{
+human_incidence \tab Human cases divided by district population.\cr
+peak_mosquito_MLE \tab Peak mosquito infection rate (maximum likelihood estimate) during the season (averaged over what time period?)\cr
+number_positive_pools \tab The number of positive mosquito pools observed by district\cr
+human_cases_binary \tab Whether or not human cases will occur in a district\cr
+positive_pools_binary \tab Whether or not a district will have any positive mosquito pools\cr
+peak_timing \tab The week (day?) of the peak mosquito infection rate\cr}
 }

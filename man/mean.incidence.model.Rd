@@ -4,12 +4,17 @@
 \alias{mean.incidence.model}
 \title{Mean Incidence Model}
 \usage{
-\method{mean}{incidence.model}(human.data, population.df)
+\method{mean}{incidence.model}(human.data, population.df, cases.per.year,
+  n.years)
 }
 \arguments{
 \item{human.data}{Standardized human data input}
 
-\item{population.df}{A vector with districts (counties) and their populations. A column labeled SPATIAL should contain the county/district information, while population should be in a TOTAL_POPULATION column.}
+\item{population.df}{A data frame with districts (counties) and their populations. A column labeled SPATIAL should contain the county/district information, while population should be in a TOTAL_POPULATION column.}
+
+\item{cases.per.year}{Average number of cases per year}
+
+\item{n.years}{Number of years in human.data}
 }
 \description{
 Predict the number of human cases of WNV based on historical number of human cases, adjusted for population

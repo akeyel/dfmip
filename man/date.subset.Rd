@@ -6,8 +6,22 @@
 \usage{
 date.subset(df, end.year, end.month, end.day, date.format)
 }
+\arguments{
+\item{df}{The input data frame}
+
+\item{end.year}{The last year to include in the output data frame}
+
+\item{end.month}{The last month to include in the output data frame}
+
+\item{end.day}{The last day to include in the output data frame}
+
+\item{date.format}{A numeric code for the date input format. 1: YYYY-MM-DD format, weather data; 2: MM/DD/YYYY format, human and mosquito data}
+}
+\value{
+A data frame that only includes data up to the specified end day, month, year
+}
 \description{
-df must have a column "date" in format YYYY-MM-DD
+df must have a column "date" in format YYYY-MM-DD (date.format = 1) or MM/DD/YYYY (date.format = 2)
 Note that the date format was slow for string operations, so a datestr field will be added
 df must have a column "year" in format YYYY
 }

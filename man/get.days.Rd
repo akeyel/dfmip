@@ -6,6 +6,12 @@
 \usage{
 get.days(year)
 }
+\arguments{
+\item{year}{The year to examine}
+}
+\value{
+The number of days in the year (365 for non-leap years, 366 for a leap year)
+}
 \description{
-Function to get number of days in a year (copied from wnv_hlpr.R)
+Does not work for years 1900 and before or after 2100 (i.e. it does not handle the Century cases)
 }

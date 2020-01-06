@@ -8,16 +8,23 @@
 #' @name dfmip
 NULL
 
+# Code for building package (Not Run)
+#devtools::document()
+#devtools::build_vignettes()
+#devtools::check()
+#devtools::check(build_args = '--no-build-vignettes') # The vignettes were taking too long to build, wanted to skip that step
+
 # Identify dependencies used in dfmip (see also DESCRIPTION file)
 # Set up package imports for NAMESPACE
 #' @import dplyr
 #' @importFrom grDevices dev.off tiff
 #' @importFrom graphics barplot curve hist par plot segments text
-#' @importFrom stats aggregate as.formula cor dnorm median na.exclude optimize predict qchisq runif sd uniroot
+#' @importFrom stats aggregate as.formula cor dnorm median na.exclude optimize predict qchisq rnorm runif sd uniroot
 #' @importFrom utils read.csv write.table
 NULL
 # @import ArboMAP # Not listed - see !require statement that loads it later. Listed under Suggests in the dependency
 # @import rf1 # Not listed - see !require statement that loads it later. Listed under Suggests in the dependency
+# #' @importFrom devtools install_github # It is saying Namespace dependency not required!
 
 #' Disease Forecast Model Intercomparison Project (dfmip) Forecast
 #'
@@ -125,9 +132,10 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     var2name = arbo.inputs$var2name
     compyear1 = arbo.inputs$compyear1
     compyear2 = arbo.inputs$compyear2
+    weathersummaryfile = NA
 
     # [[1]] is necessary to get just the results. [[2]] returns the inputs, and is for compatibility with the .Rmd format in which ArboMAP was initially developed
-    ArboMAP.results = ArboMAP(human.data, mosq.data, districtshapefile, stratafile, weather.data,
+    ArboMAP.results = ArboMAP::ArboMAP(human.data, mosq.data, districtshapefile, stratafile, weather.data,
                               weathersummaryfile, maxobservedhumandate, weekinquestion,
                               var1name, var2name, compyear1, compyear2, results.path, original.metrics = 1)[[1]]
     ArboMAP.results$model.name = "ArboMAP"
@@ -163,9 +171,10 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     var2name = arbo.inputs$var2name
     compyear1 = arbo.inputs$compyear1
     compyear2 = arbo.inputs$compyear2
+    weathersummaryfile = NA
 
     # [[1]] is necessary to get just the results. [[2]] returns the inputs, and is for compatibility with the .Rmd format in which ArboMAP was initially developed
-    ArboMAP.results = ArboMAP(human.data, mosq.data, districtshapefile, stratafile, weather.data,
+    ArboMAP.results = ArboMAP::ArboMAP(human.data, mosq.data, districtshapefile, stratafile, weather.data,
                               weathersummaryfile, maxobservedhumandate, weekinquestion,
                               var1name, var2name, compyear1, compyear2, results.path, original.metrics = 0)[[1]]
     ArboMAP.results$model.name = "ArboMAP.MOD"
@@ -353,6 +362,9 @@ NULL
 #' @param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.
 #' @param percentage For continuous and discrete forecasts, if the prediction is wihtin the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.
 #' @param id.string An ID to include in the forecast ID for this hindcast run (e.g., state)
+#' @param season_start_month The first month of the mosquito season, as a number. E.g., July would be 7.
+#' @param weeks_in_season The number of weeks to sample
+#' @param sample_frequency How frequently sample (default, 1 = weekly) #**# Other options are not currently supported
 #'
 #' @export dfmip.hindcasts
 dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.data, mosq.data,
@@ -429,6 +441,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
       # observed.inputs = list(observed.positive.districts = year.positive.districts,
       #                       observed.human.cases = year.human.cases,
       #                       observed.weeks.cases = this.weeks.cases)
+      observed.inputs = NA
 
       # Subset the human data object
       human.data.subset = human.data[human.data$year < year, ]
@@ -588,9 +601,6 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
 #' @param results.object The results object to be integrated into forecasts.df
 #'
 update.df = function(forecast.targets, forecasts.df, results.object){
-
-  #' annual.human.cases \tab Number of human cases\cr
-  #' seasonal.mosquito.MLE \tab Mosquito infection rate maximum likelihood estimate averaged over the entire season\cr }
 
   # Unpack the results object
   model.name = results.object$model.name
@@ -817,9 +827,11 @@ date.subset = function(df, end.year, end.month, end.day, date.format){
 #' This model does not adjust risk based on county - clearly an incorrect model assumption, but one that is of interest
 #'
 #'@param human.data Standardized human data input
-#'@param population.df A vector with districts (counties) and their populations. A column labeled SPATIAL should contain the county/district information, while population should be in a TOTAL_POPULATION column.
+#'@param population.df A data frame with districts (counties) and their populations. A column labeled SPATIAL should contain the county/district information, while population should be in a TOTAL_POPULATION column.
+#'@param cases.per.year Average number of cases per year
+#'@param n.years Number of years in human.data
 #'
-mean.incidence.model = function(human.data, population.df, cases.per.year){
+mean.incidence.model = function(human.data, population.df, cases.per.year, n.years){
 
   # Subset the population data to just spatial locations included in human.data
   population.df = population.df[as.character(population.df$SPATIAL) %in% as.character(human.data$district), ]
@@ -855,13 +867,16 @@ mean.incidence.model = function(human.data, population.df, cases.per.year){
 #'#**# STILL UNDER DEVELOPMENT
 #'#**# NEED TO THINK ABOUT WEEK STARTING POINT
 #'
+#'@param human.data Standardized human data input
+#'@param focal.year The year in question
+#'@param mean.annual.cases The mean number of cases each year
 #'@param week.start The day of year on which the week starts in the focal year
 #'#**# should this just be year? I bet there is a pattern based on year.
 #'
 #' Can apply this at the district level by multiplying the estimates by the mean annual cases for each district.
 #' But likely too few in NYS for that to be particularly useful?
 #'
-seasonal.incidence = function(human.data, focal.year, mean.annual.cases){
+seasonal.incidence = function(human.data, focal.year, mean.annual.cases, week.start){
 
   # Convert date to day of year
   human.data$month = sapply(as.character(human.data$date), splitter, "/", 1)
@@ -1042,6 +1057,12 @@ get.days = function(year){
 
 
 #' Check that required packages are installed prior to running the code
+#'
+#' The function will provide a list of any missing packages that need to be installed by the user
+#'
+#' @param model.name The name of the model to check dependencies for
+#' @param packages The packages required for the model in question
+#'
 check.dependencies = function(model.name, packages){
   m.base = "Please install package '%s' to run the %s model (install.packages('%s'))"
   m = ""
@@ -1150,7 +1171,7 @@ create.month.day.vecs = function(year){
 #' Samples begin on Sunday of the week, starting with the first Sunday of the month
 #'
 #' @param year The year in question
-#' @param start_season_month The first month of the mosquito season, as a number. E.g., July would be 7.
+#' @param season_start_month The first month of the mosquito season, as a number. E.g., July would be 7.
 #' @param weeks_in_season The number of weeks to sample
 #' @param sample_frequency How frequently sample (default, 1 = weekly) #**# Other options are not currently supported
 #'
@@ -1177,7 +1198,11 @@ get_sampling_weeks = function(year, season_start_month, weeks_in_season, sample_
 
 #' test.type
 #'
-#' Simple testing function to identify a bug with rbind. Bug appears to be external to dfmip.R and output_accuracy.R
+#' Simple testing function to identify a bug with rbind in the code. Bug appears to be external to dfmip.R and output_accuracy.R
+#'
+#' @param vector An input vector to check
+#' @param test.name A name for the test location in the code
+#'
 test.type = function(vector, test.name){
   message(test.name)
   for (item in vector){
@@ -1187,7 +1212,7 @@ test.type = function(vector, test.name){
     }
   }
 }
-
+#**# Consider moving to junk?
 
 #' Check models
 #'
@@ -1226,9 +1251,11 @@ check.models = function(models.to.run, models.in.dfmip){
 #' @param human.data See \code{\link{dfmip.forecast}}
 #' @param week.id See \code{\link{dfmip.forecast}}
 #' @param weekinquestion See \code{\link{dfmip.forecast}}
+#' @param mosq.data Only required if a mosquito output is among the forecast targets. See \code{\link{dfmip.forecast}}
+#' @param population.df A data frame with districts (counties) and their populations. A column labeled SPATIAL should contain the county/district information, while population should be in a TOTAL_POPULATION column. Only required if incidence calculations are desired.
 #' @param model.name The name of the model to use in forecasts.df and forecast.distributions
 run.null.models = function(forecast.targets, forecasts.df, forecast.distributions, human.data,
-                           week.id, weekinquestion, model.name = "NULL.MODELS"){
+                           week.id, weekinquestion, mosq.data = NA, population.df = NA, model.name = "NULL.MODELS"){
   # Initialize statewide results
   statewide.results = list()
   statewide.results$model.name = model.name
@@ -1279,7 +1306,7 @@ run.null.models = function(forecast.targets, forecasts.df, forecast.distribution
 
   # Estimate incidence
   if ("human.incidence" %in% forecast.targets){
-    mean.incidence = mean.incidence.model(human.data, population.df, mean.annual.cases)
+    mean.incidence = mean.incidence.model(human.data, population.df, mean.annual.cases, n.years)
     incidence.per.year = mean.incidence[[1]]
     spatial.cases.per.year = mean.incidence[[2]]
   }

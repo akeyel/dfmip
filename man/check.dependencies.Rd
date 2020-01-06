@@ -6,6 +6,11 @@
 \usage{
 check.dependencies(model.name, packages)
 }
+\arguments{
+\item{model.name}{The name of the model to check dependencies for}
+
+\item{packages}{The packages required for the model in question}
+}
 \description{
-Check that required packages are installed prior to running the code
+The function will provide a list of any missing packages that need to be installed by the user
 }

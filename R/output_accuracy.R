@@ -8,11 +8,12 @@ NULL
 
 # List package imports here. Wherever possible, do not reinvent the wheel
 # #' @import randomForest
-# #' @importFrom caret RMSE #**# Apparently RMSE is not an exported function from caret.
 # #' @importFrom scoringRules crps_sample #**# Apparently crps_sample is not an exported function
-#' @import caret
-#' @import scoringRules
+#' @importFrom caret RMSE
+#' @importFrom scoringRules crps_sample
 NULL
+
+#**# Moved Generate Test Data function to junk.R.
 
 #' Assess Accuracy
 #'
@@ -49,7 +50,7 @@ NULL
 #'   }
 #'
 #' @examples
-#' assess.accuracy(predictions.mat = matrix(rnorm(1000, 8, 1), ncol = 1), observations.vec = rnorm(1000, 8, 1), forecast.target = "seasonal.mosquito.MLE")
+#' assess.accuracy(matrix(rnorm(1000, 8, 1), ncol = 1), rnorm(1000, 8, 1), "seasonal.mosquito.MLE")
 #'
 #' @export assess.accuracy
 assess.accuracy = function(predictions.mat, observations.vec, forecast.target, threshold = 'default', percentage = 'default'){
@@ -62,7 +63,7 @@ assess.accuracy = function(predictions.mat, observations.vec, forecast.target, t
   # Set up vectors of forecasting targets
   binary.targets = c("human_cases_binary" , "positive_pools_binary")
   continuous.targets = c("annual.human.cases", "human_incidence", "seasonal.mosquito.MLE", "peak_mosquito_MLE")
-  discrete.targets = c("", "number_positive_pools")
+  discrete.targets = c("number_positive_pools")
   time.targets = c("peak_timing")
   forecast.targets = c(binary.targets, continuous.targets, discrete.targets, time.targets)
 
@@ -113,6 +114,22 @@ assess.accuracy = function(predictions.mat, observations.vec, forecast.target, t
 #' Set up threshold and percentage defaults
 #'
 #' Simple function to configure the defaults based on the type of input
+#'
+#'@param forecast.target The quantity being forecast. Forecasts targets are: \itemize{
+#' \item annual.human.cases
+#' \item human_incidence
+#' \item seasonal.mosquito.MLE
+#' \item peak_mosquito_MLE
+#' \item number_positive_pools
+#' \item human_cases_binary
+#' \item positive_pools_binary
+#' \item peak_timing }
+#' @param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.
+#' @param percentage For continuous and discrete forecasts, if the prediction is wihtin the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.
+#' @param binary.targets Binary forecasting targets. Currently 'human_cases_binary' and 'positive_pools_binary'.
+#' @param continuous.targets Continuous forecasting targets. Currently "annual.human.cases", "human_incidence", "seasonal.mosquito.MLE", "peak_mosquito_MLE"
+#' @param discrete.targets Discrete value targets, currently 'number_positive_pools'
+#' @param time.targets Time related targets, currently 'peak_timing'.
 #'
 setup.t.p.defaults = function(forecast.target, threshold, percentage,
                               binary.targets, continuous.targets,
@@ -277,34 +294,4 @@ update.time.targets = function(accuracy.metrics, predictions.mat, observations.v
   return(accuracy.metrics)
 }
 
-### JUNK BELOW HERE ###
-#' Generate test data
-#'
-#' NOT USED, NOT CALLED. JUNK FUNCTION INITIALLY INTENDED TO HELP WITH SIMULATED DATA AND TESTING
-#'
-generate.test.data = function(forecast.target, distribution, sample.size){
-
-  # For reference
-  #forecast.targets = c("", "human_incidence", "seasonal.mosquito.MLE",
-  #                     "peak_mosquito_MLE", "number_positive_pools",
-  #                     "human_cases_binary", "positive_pools_binary", "peak_timing")
-
-  continuous.targets = c("human_incidence", "seasonal.mosquito.MLE", "peak_mosquito_MLE")
-  if (!forecast.target %in% continuous.targets){
-    stop(sprintf("Test data support for %s has not yet been scripted", forecast.target))
-  }
-
-  if (forecast.target %in% continuous.targets){
-    if (distribution == "normal"){
-      predictions.vec = rnorm(sample.size, 4, 1)
-      observations.vec = rnorm(sample.size, 4, 1)
-
-      # Remove impossible observations
-      predictions.vec[predictions.vec < 0] = 0
-      observations.vec[observations.vec < 0] = 0
-    }
-  }
-
-  return(list(predictions.vec, observations.vec))
-}
 

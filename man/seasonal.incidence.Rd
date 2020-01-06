@@ -4,9 +4,15 @@
 \alias{seasonal.incidence}
 \title{Seasonal Incidence Model}
 \usage{
-seasonal.incidence(human.data, focal.year, mean.annual.cases)
+seasonal.incidence(human.data, focal.year, mean.annual.cases, week.start)
 }
 \arguments{
+\item{human.data}{Standardized human data input}
+
+\item{focal.year}{The year in question}
+
+\item{mean.annual.cases}{The mean number of cases each year}
+
 \item{week.start}{The day of year on which the week starts in the focal year
 #**# should this just be year? I bet there is a pattern based on year.
 

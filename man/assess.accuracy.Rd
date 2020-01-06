@@ -18,9 +18,9 @@ categories.}
 \item{observations.vec}{A vector where each entry corresponds to the observed outcome for the corresponding row in predictions.mat.}
 
 \item{forecast.target}{The quantity being forecast. Forecasts targets are: \itemize{
-\item human_cases
+\item annual.human.cases
 \item human_incidence
-\item seasonal_mosquito_MLE
+\item seasonal.mosquito.MLE
 \item peak_mosquito_MLE
 \item number_positive_pools
 \item human_cases_binary
@@ -47,6 +47,6 @@ High level handler function to decide which metrics to compute and then call
 the code to compute them. At present, only continuous and discrete outcomes are supported.
 }
 \examples{
-assess.accuracy(predictions.mat = matrix(rnorm(1000, 8, 1), ncol = 1), observations.vec = rnorm(1000, 8, 1), forecast.target = "seasonal_mosquito_MLE")
+assess.accuracy(matrix(rnorm(1000, 8, 1), ncol = 1), rnorm(1000, 8, 1), "seasonal.mosquito.MLE")
 
 }

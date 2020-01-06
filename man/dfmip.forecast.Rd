@@ -4,12 +4,16 @@
 \alias{dfmip.forecast}
 \title{Disease Forecast Model Intercomparison Project (dfmip) Forecast}
 \usage{
-dfmip.forecast(models.to.run, human.data, mosq.data, weather.data,
-  districtshapefile, weekinquestion, week.id, results.path,
+dfmip.forecast(forecast.targets, models.to.run, human.data, mosq.data,
+  weather.data, districtshapefile, weekinquestion, week.id, results.path,
   arbo.inputs = "none", observed.inputs = "none",
   population.df = "none", rf1.inputs = "none")
 }
 \arguments{
+\item{forecast.targets}{The quantities for which hindcasts are to be made. Options are: \tabular{ll}{
+annual.human.cases \tab Number of human cases\cr
+seasonal.mosquito.MLE \tab Mosquito infection rate maximum likelihood estimate averaged over the entire season\cr }}
+
 \item{models.to.run}{A string vector of the models to run. Options are: \tabular{ll}{
 NULL.MODELS \tab Forecasts based on statewide incidence\cr
 ArboMAP \tab Development version ArboMAP forecasts, see details section.\cr
@@ -19,9 +23,8 @@ RF1_A \tab Random Forest model, all available inputs.\cr  }
 Note these entries are case-sensitive and are run by keyword, so run in a fixed order (NULL.MODELS, ArboMAP, ArbMAP.MOD, RF1_C, RF1_A),
 regardless of the order specified in the models.to.run vector.}
 
-\item{human.data}{Data on human cases of the disease. Must be formatted with two columns: district and date. The district column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case.
-#**# WHAT IF THESE DATA ARE MISSING? I.E. just making a mosquito forecast with RF1?
-#**# Does the date need to be in a particular format? The sample data is "/" delimited.}
+\item{human.data}{Data on human cases of the disease. Must be formatted with two columns: district and date (in format M/D/Y, with forward slashes as delimiters). An optional 'year' column may also be present. If absent, it will be generated from the date column. The district column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case.
+#**# WHAT IF THESE DATA ARE MISSING? I.E. just making a mosquito forecast with RF1?}
 
 \item{mosq.data}{Data on mosquito pools tested for the disease. Must be formatted with 4 columns: district (the spatial unit, e.g. county), col_date: the date the mosquitoes were tested, wnv_result: whether or not the pool was positive, pool_size: the number of mosquitoes tested in the pool. A fifth column species is optional but is not used by the code}
 
@@ -32,7 +35,7 @@ The read.weather.data function from ArboMAP is a useful way to process one or mo
 
 \item{weekinquestion}{The focal week for the forecast. For the Random Forest model, this will be the last day used for making the forecast}
 
-\item{week.id}{An arbitrary ID for the analysis run to distinguish it from other weeks or runs for different locations. #**# analysis.id would be a better name, but would require changes to the code in multiple places}
+\item{week.id}{A two-part ID for the analysis run to distinguish it from other weeks or runs. The first part is a character string, while the second part is a date in the format YYYY-MM-DD #**# analysis.id would be a better name, but would require changes to the code in multiple places}
 
 \item{results.path}{The base path in which to place the modeling results. Some models will create sub-folders for model specific results}
 
@@ -68,7 +71,7 @@ ArboMAP Details: See \code{\link[ArboMAP]{ArboMAP}} for more details
    Davis et al. 2017 PLoS Currents Outbreaks 9 10.1371/currents.outbreaks.90e80717c4e67e1a830f17feeaaf85de.
    Davis et al. 2018 Acta Tropica 185: 242-250
 
-RF1 Details: See \code{\link{rf1}}
+RF1 Details: See rf1 package: ?rf1
 
 Null models are at the scale of the state, but future updates aim to allow variation by district
 }

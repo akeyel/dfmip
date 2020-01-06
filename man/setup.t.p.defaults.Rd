@@ -7,6 +7,29 @@
 setup.t.p.defaults(forecast.target, threshold, percentage, binary.targets,
   continuous.targets, discrete.targets, time.targets)
 }
+\arguments{
+\item{forecast.target}{The quantity being forecast. Forecasts targets are: \itemize{
+\item annual.human.cases
+\item human_incidence
+\item seasonal.mosquito.MLE
+\item peak_mosquito_MLE
+\item number_positive_pools
+\item human_cases_binary
+\item positive_pools_binary
+\item peak_timing }}
+
+\item{threshold}{For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.}
+
+\item{percentage}{For continuous and discrete forecasts, if the prediction is wihtin the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.}
+
+\item{binary.targets}{Binary forecasting targets. Currently 'human_cases_binary' and 'positive_pools_binary'.}
+
+\item{continuous.targets}{Continuous forecasting targets. Currently "annual.human.cases", "human_incidence", "seasonal.mosquito.MLE", "peak_mosquito_MLE"}
+
+\item{discrete.targets}{Discrete value targets, currently 'number_positive_pools'}
+
+\item{time.targets}{Time related targets, currently 'peak_timing'.}
+}
 \description{
 Simple function to configure the defaults based on the type of input
 }

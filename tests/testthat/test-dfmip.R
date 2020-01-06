@@ -1,7 +1,7 @@
 # When set to 0, the tests that take several minutes to run are skipped
 #0.8 s with Test_All = 0
 #796.1 s with Test_All = 1 #**# FILL IN TIME ESTIMATE
-Test_All = 2
+Test_All = 0
 
 
 test_that("forecasting model names are correct", {
@@ -174,7 +174,8 @@ test_that("mosquito MLE estimates are calculated correctly",{
   }
 
   # Load example data to run the models (back out two directories to get into main package directory)
-  load("../../vignettes/dfmip_example_inputs.RData")
+  load("dfmip_example_inputs.RData")
+  #load("../../vignettes/dfmip_example_inputs.RData")
   estimate = rf1::calculate.MLE.v2(mosq.data)
   expect_equal(names(estimate), c("GROUP", "CI.lower", "CI.upper", "IR", "COUNTY", "abundance", "density", "YEAR", "county_year"))
   expect_equal(round(estimate$CI.lower[1],5), 0.00059)
@@ -191,6 +192,15 @@ test_that("mosquito MLE estimates are calculated correctly",{
 
 })
 
+test_that('the example data can be loaded properly', {
+  # Load example data to run the models (back out two directories to get into main package directory)
+  #stop(getwd())
+  load("dfmip_example_inputs.RData")
+  expect_equal(1,1)
+
+
+})
+
 
 #**# SKIP THIS ON CRAN - THIS WILL TAKE A WHILE TO RUN
 test_that("ArboMAP model produces the expected outputs", {
@@ -199,7 +209,8 @@ test_that("ArboMAP model produces the expected outputs", {
   }
 
   # Load example data to run the models (back out two directories to get into main package directory)
-  load("../../vignettes/dfmip_example_inputs.RData")
+  load("dfmip_example_inputs.RData")
+  #load("../../vignettes/dfmip_example_inputs.RData")
 
   # Create a temporary results path
   results.path = "DFMIPTESTRESULTS/"
@@ -271,7 +282,8 @@ test_that("NULL model produces the expected outputs", {
   }
 
   # Load example data to run the models (back out two directories to get into main package directory)
-  load("../../vignettes/dfmip_example_inputs.RData")
+  load("dfmip_example_inputs.RData")
+  #load("../../vignettes/dfmip_example_inputs.RData")
 
   # Create a temporary results path
   results.path = "DFMIPTESTRESULTS/"
@@ -336,7 +348,8 @@ test_that("RF1 model produces the expected outputs", {
   }
 
   # Load example data to run the models (back out two directories to get into main package directory)
-  load("../../vignettes/dfmip_example_inputs.RData")
+  load("dfmip_example_inputs.RData")
+  #load("../../vignettes/dfmip_example_inputs.RData")
 
   # Create a temporary results path
   results.path = "DFMIPTESTRESULTS/"

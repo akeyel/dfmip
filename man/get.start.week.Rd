@@ -6,6 +6,12 @@
 \usage{
 get.start.week(year)
 }
+\arguments{
+\item{year}{The selected year}
+}
+\value{
+The day of the first Sunday for the selected year
+}
 \description{
-Goal is to be able to have predictions comparable to ArboMAP
+Return the day associated with the first Sunday for the given year
 }

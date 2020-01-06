@@ -2,12 +2,20 @@
 % Please edit documentation in R/dfmip.R
 \name{get.DOY}
 \alias{get.DOY}
-\title{Get Day of Year, given year, month, and day
-COPIED FROM wnv_hlpr.R}
+\title{Get Day of Year, given year, month, and day}
 \usage{
 get.DOY(year, month, day)
 }
+\arguments{
+\item{year}{Input year}
+
+\item{month}{Input month}
+
+\item{day}{Input day}
+}
+\value{
+Return ordinal day of the year
+}
 \description{
-Get Day of Year, given year, month, and day
 COPIED FROM wnv_hlpr.R
 }

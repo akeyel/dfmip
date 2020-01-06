@@ -20,10 +20,11 @@ Description: A simple, consistent interface to multiple
     and open source software. Journal of Aquatic Animal Health 17: 386 - 391.
     Original source code from Williams and Moffitt 2005 is available here:
     https://www.tandfonline.com/doi/suppl/10.1577/H04-
-    066.1/suppl_file/uahh_a_10264377_sup_0001.txt
+    066.1/suppl_file/uahh_a_10264377_sup_0001.txt.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
+VignetteBuilder: knitr
 Imports:
 	caret,
 	dplyr,
@@ -31,6 +32,7 @@ Imports:
 	psych,
 	scoringRules
 Suggests:
+    rf1,
     ArboMAP,
     knitr,
     rmarkdown,

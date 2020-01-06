@@ -4,15 +4,14 @@
 \alias{update.df}
 \title{Update data frame}
 \usage{
-\method{update}{df}(forecasts.df, results.object, observed.inputs)
+\method{update}{df}(forecast.targets, forecasts.df, results.object)
 }
 \arguments{
+\item{forecast.targets}{The targets to include in the output data frame. See \code{\link{dfmip.forecast}} for options.}
+
 \item{forecasts.df}{The data frame object to contain the results from dfmip}
 
 \item{results.object}{The results object to be integrated into forecasts.df}
-
-\item{observed.inputs}{If the model is being used to hindcast, include the
-observed values for comparison to the model predictions}
 }
 \description{
 forecasts.df should be initialized as NA if it does not already exist and contain data.
