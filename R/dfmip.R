@@ -54,15 +54,14 @@ NULL
 #' RF1_A \tab Random Forest model, all available inputs.\cr  }
 #' Note these entries are case-sensitive and are run by keyword, so run in a fixed order (NULL.MODELS, ArboMAP, ArbMAP.MOD, RF1_C, RF1_A),
 #' regardless of the order specified in the models.to.run vector.
-#' @param human.data Data on human cases of the disease. Must be formatted with two columns: district and date. The district column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case.
+#' @param human.data Data on human cases of the disease. Must be formatted with two columns: district and date (in format M/D/Y, with forward slashes as delimiters). An optional 'year' column may also be present. If absent, it will be generated from the date column. The district column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case.
 #' #**# WHAT IF THESE DATA ARE MISSING? I.E. just making a mosquito forecast with RF1?
-#' #**# Does the date need to be in a particular format? The sample data is "/" delimited.
 #' @param mosq.data Data on mosquito pools tested for the disease. Must be formatted with 4 columns: district (the spatial unit, e.g. county), col_date: the date the mosquitoes were tested, wnv_result: whether or not the pool was positive, pool_size: the number of mosquitoes tested in the pool. A fifth column species is optional but is not used by the code
 #' @param weather.data Data on weather variables to be included in the analysis. See the read.weather.data function for details about data format.
 #' The read.weather.data function from ArboMAP is a useful way to process one or more data files downloaded via Google Earth Engine.
 #' @param districtshapefile The shapefile with polygons representing the districts. #**# Are there required fields?
 #' @param weekinquestion The focal week for the forecast. For the Random Forest model, this will be the last day used for making the forecast
-#' @param week.id An arbitrary ID for the analysis run to distinguish it from other weeks or runs for different locations. #**# analysis.id would be a better name, but would require changes to the code in multiple places
+#' @param week.id A two-part ID for the analysis run to distinguish it from other weeks or runs. The first part is a character string, while the second part is a date in the format YYYY-MM-DD #**# analysis.id would be a better name, but would require changes to the code in multiple places
 #' @param results.path The base path in which to place the modeling results. Some models will create sub-folders for model specific results
 #' @param arbo.inputs Inputs specific to the ArboMAP model. If the ArboMAP model or ArboMAP.MOD model are not being run, this should be set to 'none' or omitted from the function call
 #' @param observed.inputs Observed values to be used for comparison purposes. Not relevant for forecasts, but of interest for evaluating hindcasts. If unused, set the variable to NA or omit from the function call
@@ -101,86 +100,11 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
     message("Running NULL models")
 
-    # Statewide incidence
-    # Calculate total number of human cases
-    tot.cases = nrow(human.data)
+    null.out = run.null.models(forecast.targets, forecasts.df, forecast.distributions, human.data,
+                            week.id, weekinquestion, model.name = "NULL.MODELS")
 
-    # Calculate total number of years
-    n.years = length(seq(min(human.data$year), max(human.data$year)))
-
-    # Estimate mean cases per year
-    mean.annual.cases = tot.cases / n.years
-
-    # Estimate mean annual MLE
-    mean.seasonal.mosquito.MLE = NA
-    if ("seasonal.mosquito.MLE" %in% forecast.targets){
-      md.data = calculate.MLE.v2(mosq.data, "annual")
-      MLE.vec = c()
-      for (year in unique(md.data$YEAR)){
-        year.MLE = md.data[md.data$YEAR == year, ]
-        seasonal.mosquito.MLE = mean(year.MLE$IR, na.rm = TRUE) #**# Average is problematic here, but I am not sure of a better approach at this point
-        MLE.vec = c(MLE.vec, seasonal.mosquito.MLE)
-      }
-      mean.seasonal.mosquito.MLE = mean(MLE.vec, na.rm = TRUE)
-    }
-
-    # Estimate incidence
-    if ("human.incidence" %in% forecast.targets){
-      mean.incidence = mean.incidence.model(human.data, population.df, mean.annual.cases)
-      incidence.per.year = mean.incidence[[1]]
-      spatial.cases.per.year = mean.incidence[[2]]
-    }
-
-    # Get the first 4 characters of weekinquestion and convert to a numeric year
-    focal.year = as.numeric(substring(as.character(weekinquestion), 1,4))
-    focal.month = as.numeric(substring(as.character(weekinquestion),6,7))
-    focal.day = as.numeric(substring(as.character(weekinquestion), 9,10))
-    seasonal.cases = seasonal.incidence(human.data, focal.year, mean.annual.cases)
-
-    # results needs to include these things:
-    #weeks.cases = Districts.With.Cases.Focal.Week, annual.positive.district.weeks = positivesthisyear, multiplier = multiplier, annual.human.cases = human.cases)
-    #new.row = c(model.name, forecast.id, annual.positive.district.weeks, annual.human.cases, multiplier, weeks.cases)
-
-    # Somehow get the focal week out of seasonal cases.
-    week.doy = get.DOY(focal.year, focal.month, focal.day)
-    weeks.cases = seasonal.cases$ESTIMATED.CASES[seasonal.cases$WEEK.START == week.doy]
-
-    if (length(weeks.cases) == 0){
-      m1 = sprintf("No cases returned, week.doy was %s, seasonal cases includes weeks %s",
-                   week.doy, paste(seasonal.cases$WEEK.START, collapse = ", "))
-      stop(m1)
-    }
-
-    if (length(weeks.cases) > 1){  stop("More than one result was returned for weeks.cases")  }
-
-    # Initialize statewide results
-    statewide.results = list()
-    statewide.results$model.name = "NULL.MODELS"
-    statewide.results$forecast.id = week.id
-    statewide.results$multiplier = NA #**# Should this be incidence?
-    statewide.results$annual.human.cases = mean.annual.cases
-    statewide.results$annual.positive.district.weeks = NA #**# In the future, extract this from the historical mosquito data
-    statewide.results$weeks.cases = weeks.cases
-    statewide.results$seasonal.mosquito.MLE = NA #**# NEED TO SCRIPT
-
-    # Initialize statewide.distributions
-    statewide.distributions = list()
-    statewide.distributions$annual.human.cases = mean.annual.cases #**# ALL WE NEED IS A SD AND WE COULD GIVE A NORMAL DISTRIBUTION HERE!
-    statewide.distributions$seasonal.mosquito.MLE = NA #**# NEED TO SCRIPT THIS
-    forecast.distributions = update.distribution(forecast.targets, statewide.results$model.name, statewide.results$forecast.id, forecast.distributions, statewide.distributions)
-
-    # Initialize district-specific results
-    district.results = list()
-    district.results$model.name = "DISTRICT.INCIDENCE"
-    district.results$forecast.id = week.id
-    district.results$multiplier = NA # Use incidence?
-    #**# Add additional fields once this is supported
-
-    forecasts.df = update.df(forecast.targets, forecasts.df, statewide.results)
-    #**# Un-comment once district-specific results are supported by the code
-    #forecasts.df = update.df(forecasts.df, district.results, observed.inputs)
-
-
+    forecasts.df = null.out[[1]]
+    forecast.distributions = null.out[[2]]
   }
 
   # Run ArboMAP model
@@ -408,9 +332,8 @@ NULL
 #' Note these entries are case-sensitive and are run by keyword, so run in a fixed order (NULL.MODELS, ArboMAP, ArbMAP.MOD, RF1_C, RF1_A),
 #' regardless of the order specified in the models.to.run vector.
 #' @param focal.years The years for which hindcasts will be made. Hindcasts will use all prior years as training data.
-#' @param human.data Data on human cases of the disease. Must be formatted with two columns: district and date. The district column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case.
+#' @param human.data Data on human cases of the disease. Must be formatted with two columns: district and date. The district column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case. The date column must be in format M/D/Y, with forward slashes as delimiters
 #' #**# WHAT IF THESE DATA ARE MISSING? I.E. just making a mosquito forecast with RF1?
-#' #**# Does the date need to be in a particular format? The sample data is "/" delimited.
 #' @param mosq.data Data on mosquito pools tested for the disease. Must be formatted with 4 columns: district (the spatial unit, e.g. county), col_date: the date the mosquitoes were tested, wnv_result: whether or not the pool was positive, pool_size: the number of mosquitoes tested in the pool. A fifth column species is optional but is not used by the code
 #' @param weather.data Data on weather variables to be included in the analysis. See the read.weather.data function for details about data format.
 #' The read.weather.data function from ArboMAP is a useful way to process one or more data files downloaded via Google Earth Engine.
@@ -711,6 +634,11 @@ update.df = function(forecast.targets, forecasts.df, results.object){
     new.row = c(model.name, forecast.id, UNIT, date, year, targets)
     #test.type(new.row, 'L682')
     forecasts.df = rbind(forecasts.df, new.row)
+
+    # Ensure numeric fields are numeric
+    if ("annual.human.cases" %in% forecast.targets){ forecasts.df$annual.human.cases = as.numeric(forecasts.df$annual.human.cases) }
+    if ('seasonal.mosquito.MLE' %in% forecast.targets){ forecasts.df$seasonal.mosquito.MLE = as.numeric(forecasts.df$seasonal.mosquito.MLE) }
+    forecasts.df$YEAR = as.numeric(forecasts.df$YEAR)
   }
 
   return(forecasts.df)
@@ -799,68 +727,6 @@ update.distribution = function(forecast.targets, model.name, forecast.id, foreca
   return(forecast.distributions)
 }
 
-
-#' Update data frame (old version no longer compatible)
-#'
-#' @description forecasts.df should be initialized as NA if it does not already exist and contain data.
-#' Otherwise, it is updated with the results. This function provides a standardized format for inputting
-#' data from different models in to a common data frame
-#'
-#' @param forecasts.df The data frame object to contain the results from dfmip
-#' @param results.object The results object to be integrated into forecasts.df
-#' @param observed.inputs If the model is being used to hindcast, include the
-#' observed values for comparison to the model predictions
-#'
-update.df.old = function(forecasts.df, results.object, observed.inputs){
-
-  # Unpack the results object
-  model.name = results.object$model.name
-  forecast.id = results.object$forecast.id
-
-  annual.positive.district.weeks = results.object$annual.positive.district.weeks
-  annual.human.cases = results.object$annual.human.cases
-  multiplier = results.object$multiplier
-  weeks.cases = results.object$weeks.cases
-
-  # Plot observed vs. forecast human cases by state, year, and date of forecast
-  state = splitter(as.character(forecast.id), "_", 1, 1)
-  date = splitter(as.character(forecast.id), "_", 2, 1)
-  year = splitter(date, "-", 1, 0)
-
-  if (!is.na(observed.inputs)){
-    #message(sprintf("Observed human cases was %s", observed.human.cases))
-    observed.positive.districts = observed.inputs$observed.positive.districts
-    observed.human.cases = observed.inputs$observed.human.cases
-    observed.weeks.cases = observed.inputs$observed.weeks.cases
-  }else{
-    observed.positive.districts = observed.human.cases = observed.weeks.cases = NA
-    #message("observed.inputs was NA")
-  }
-
-  # Create the results object if it does not already exist
-  if (is.na(forecasts.df)){
-    forecasts.df = data.frame(MODEL.NAME = model.name, FORECAST.ID = as.character(forecast.id), STATE = as.character(state), DATE = as.character(date), YEAR = year,
-                              ANNUAL.POSITIVE.DISTRICT.WEEKS = annual.positive.district.weeks,
-                              OBSERVED.POSITIVE.DISTRICTS = observed.positive.districts, annual.human.cases = annual.human.cases,
-                              OBSERVED.HUMAN.CASES = observed.human.cases, MULTIPLIER = multiplier,
-                              FORECAST.WEEK.CASES = weeks.cases, OBSERVED.WEEK.CASES = observed.weeks.cases)
-
-    # Ensure that fields come in as character, so that factor levels are not locked and fields are fully updateable
-    forecasts.df$MODEL.NAME = as.character(forecasts.df$MODEL.NAME)
-    forecasts.df$FORECAST.ID = as.character(forecasts.df$FORECAST.ID)
-    forecasts.df$STATE = as.character(forecasts.df$STATE)
-    forecasts.df$DATE = as.character(forecasts.df$DATE)
-  # Otherwise, update it using rbind
-  }else{
-    new.row = c(model.name, forecast.id, state, date, year, annual.positive.district.weeks, observed.positive.districts,
-                annual.human.cases, observed.human.cases, multiplier, weeks.cases, observed.weeks.cases)
-    #test.type(new.row, 'L815')
-    forecasts.df = rbind(forecasts.df, new.row)
-  }
-
-  return(forecasts.df)
-}
-
 #' Split strings using strsplit in a way that can easily be used within sapply
 #'
 #' @param string The string to be split
@@ -882,31 +748,19 @@ splitter = function(string, delimiter, position, as.string = 0){
   return(out)
 }
 
-#' Make a function that can be applied with sapply to split text
-#' #**# REPLACE INSTANCES OF THIS WITH splitter function
-split.text = function(x, part){
-  parts = strsplit(x, "_")[[1]]
-  out = parts[part]
-  return(out)
-}
-
-#' Split strings using substr in a way that can easily be used within sapply
-#'
-#' @param string The string to be split
-#' @param start The starting position for the split
-#' @param end The ending position for the split
-#'
-splitter2 = function(string, start, end){
-  out = substr(string,start, end)
-  out = as.numeric(as.character(out))
-  return(out)
-}
-
 #' Restrict data to a single date
 #'
 #' df must have a column "date" in format YYYY-MM-DD (date.format = 1) or MM/DD/YYYY (date.format = 2)
 #' Note that the date format was slow for string operations, so a datestr field will be added
 #' df must have a column "year" in format YYYY
+#'
+#' @param df The input data frame
+#' @param end.year The last year to include in the output data frame
+#' @param end.month The last month to include in the output data frame
+#' @param end.day The last day to include in the output data frame
+#' @param date.format A numeric code for the date input format. 1: YYYY-MM-DD format, weather data; 2: MM/DD/YYYY format, human and mosquito data
+#'
+#' @return A data frame that only includes data up to the specified end day, month, year
 #'
 #'@export date.subset
 date.subset = function(df, end.year, end.month, end.day, date.format){
@@ -915,6 +769,7 @@ date.subset = function(df, end.year, end.month, end.day, date.format){
   if (date.format == 1){
     # add df$month and df$day columns
     df$datestr = as.character(df$date) # Speeds up the splitting process
+    df$year = sapply(df$datestr, splitter, "-", 1)
     df$month = sapply(df$datestr, splitter, '-', 2)
     df$day = sapply(df$datestr, splitter, "-", 3)
   }
@@ -927,7 +782,7 @@ date.subset = function(df, end.year, end.month, end.day, date.format){
     df$day = sapply(df$datestr, splitter, '/', 2)
   }
 
-  #df$month = sapply(df$date, splitter2, 6,7) #**# Rate limiter was the date format, not the function used to split the date field
+  #df$month = sapply(df$date, splitter2, 6,7) #**# Rate limiter was the date format, not the function used to split the date field. #**# splitter2 function moved to junk.R in dfmip_development folder (a local folder on ACK's machine)
 
   # First remove all records beyond the year in question
   df.1 = df[df$year <= end.year, ]
@@ -1061,6 +916,13 @@ seasonal.incidence = function(human.data, focal.year, mean.annual.cases){
 }
 
 #' Goal is to be able to have predictions comparable to ArboMAP
+#'
+#' Return the day associated with the first Sunday for the given year
+#'
+#' @param year The selected year
+#'
+#' @return The day of the first Sunday for the selected year
+#'
 get.start.week = function(year){
 
   if (year <= 1900 | year >= 2100){
@@ -1104,7 +966,15 @@ get.start.week = function(year){
 
 
 #' Get Day of Year, given year, month, and day
+#'
 #' COPIED FROM wnv_hlpr.R
+#'
+#' @param year Input year
+#' @param month Input month
+#' @param day Input day
+#'
+#' @return Return ordinal day of the year
+#'
 get.DOY = function(year, month, day){
 
   # Determine if it is a leap year
@@ -1139,6 +1009,12 @@ get.DOY = function(year, month, day){
 }
 
 #' Function to get number of days in a year (copied from wnv_hlpr.R)
+#'
+#' Does not work for years 1900 and before or after 2100 (i.e. it does not handle the Century cases)
+#'
+#' @param year The year to examine
+#'
+#' @return The number of days in the year (365 for non-leap years, 366 for a leap year)
 #'
 get.days = function(year){
 
@@ -1509,8 +1385,8 @@ convert.human.data = function(hd, all.counties, all.years){
   hd$count = 1 # One case per entry
   hd.data = aggregate(hd$count, by = list(hd$county_year), "sum")
   colnames(hd.data) = c("county_year", "Cases")
-  hd.data$county = sapply(hd.data$county_year, split.text, part = 1)
-  hd.data$year =  sapply(hd.data$county_year, split.text, part = 2)
+  hd.data$county = sapply(hd.data$county_year, splitter, "_", 1)
+  hd.data$year =  sapply(hd.data$county_year, splitter, "_", 2)
 
   # Make sure there is a record for every year and county included in the data set
   for (county in all.counties){
@@ -1534,7 +1410,28 @@ convert.human.data = function(hd, all.counties, all.years){
 #'
 #' Modified from wnv_hlpr.R
 #'
+#' @param md Mosquito data in the format required for dfmip.forecast \code{\link{dfmip.forecast}}
+#' @param temporal.resolution Must be set to 'annual' for now. Ideally support for finer-scale resolution will be added.
+#'
+#' @return Mosquito data compiled to give estimated mosquito infection rates by spatial unit and temporal resolution
+#'
 calculate.MLE.v2 = function(md, temporal.resolution = "annual"){
+
+  # Check that expected column names are present, if not, give an informative error
+  expected.names = c('district', "col_date", "wnv_result", "pool_size") #'species' is not actually required at this point
+  is.error = 0
+  missing.vec = c()
+  for (e.name in expected.names){
+    if (!e.name %in% names(md)){
+      is.error = 1
+      missing.vec = c(missing.vec, e.name)
+    }
+  }
+  if (is.error == 1){
+    m = "One or more required fields is missing. Inputs are case sensitive. Missing fields are:"
+
+    stop(sprintf("%s %s. Input fields were: %s", m, paste(missing.vec, collapse = ", "), paste(names(md), collapse = ', ')))
+  }
 
   # Call dprev function from MLE_IR.R
   if (!exists("dprev")){ stop(" Load the dprev function from Williams & MOffit 2005 into computer memory. It is required for the calculation of MLE's") }
@@ -1895,53 +1792,6 @@ add.data = function(rs.data, this.file, this.merge, breaks){
 }
 
 
-#' Function to return break points by break type
-#'
-get.breaks = function(days, break.type){
-
-  Jan = 31
-  Feb = 28
-  Mar = 31
-  Apr = 30
-  May = 31
-  Jun = 30
-  Jul = 31
-  Aug = 31
-  Sep = 30
-  Oct = 31
-  Nov = 30
-  Dec = 31
-
-  if (days == 366){  Feb = 29  }
-
-  month.vec = c(Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec)
-
-  cumulative = 0
-  breaks = c()
-  count = 0
-  for(month in month.vec){
-    count = count + 1
-    cumulative = cumulative + month
-
-    # Assign monthly breaks
-    if (break.type == "monthly"){
-      breaks = c(breaks, cumulative)
-    }
-
-    if (break.type == "seasonalDJF"){
-      stop("Sorry, we have not programmed this yet, because we need to figure out how to include the previous year's December")
-    }
-
-    # Assign easy seasonal breaks #Might be more realistic from a WNV perspective and easier to program
-    if (break.type == "seasonal"){
-      if (count %% 3 == 0){
-        breaks = c(breaks, cumulative)
-      }
-    }
-  } # End of for loop
-
-  return(breaks)
-}
 
 
 #### HELPER FUNCTIONS FOR do.rf FUNCTION CALL ####
@@ -2592,3 +2442,112 @@ check.models = function(models.to.run, models.in.dfmip){
 
 }
 
+
+#' Generate null models based on mean values
+#'
+#' Create simple null models for comparison
+#'
+#' @param forecast.targets See \code{\link{dfmip.forecast}}
+#' @param forecasts.df See \code{\link{dfmip.forecast}}
+#' @param forecast.distributions See \code{\link{dfmip.forecast}}
+#' @param human.data See \code{\link{dfmip.forecast}}
+#' @param week.id See \code{\link{dfmip.forecast}}
+#' @param weekinquestion See \code{\link{dfmip.forecast}}
+#' @param model.name The name of the model to use in forecasts.df and forecast.distributions
+run.null.models = function(forecast.targets, forecasts.df, forecast.distributions, human.data,
+                           week.id, weekinquestion, model.name = "NULL.MODELS"){
+  # Initialize statewide results
+  statewide.results = list()
+  statewide.results$model.name = model.name
+  statewide.results$forecast.id = week.id
+  statewide.results$multiplier = NA #**# Should this be incidence? #**# IS THIS OBJECT NEEDED?
+
+  # Initialize statewide.distributions
+  statewide.distributions = list()
+
+  # Statewide incidence
+  # Calculate total number of human cases
+  tot.cases = nrow(human.data)
+
+  # Create the year column, if it is missing
+  if (length(human.data$year) == 0){
+    human.data$year = sapply(as.character(human.data$date), splitter,  "/", 3)
+  }
+
+  # Calculate total number of years
+  n.years = length(seq(min(human.data$year), max(human.data$year)))
+
+  # Estimate mean cases per year
+  mean.annual.cases = tot.cases / n.years
+
+  # Update results objects for human cases
+  if ('annual.human.cases' %in% forecast.targets){
+    statewide.results$annual.human.cases = mean.annual.cases
+    statewide.distributions$annual.human.cases = mean.annual.cases #**# ALL WE NEED IS A SD AND WE COULD GIVE A NORMAL DISTRIBUTION HERE!
+  }
+
+  # Estimate mean annual MLE
+  mean.seasonal.mosquito.MLE = NA
+  if ("seasonal.mosquito.MLE" %in% forecast.targets){
+    md.data = calculate.MLE.v2(mosq.data, "annual")
+    MLE.vec = c()
+    for (year in unique(md.data$YEAR)){
+      year.MLE = md.data[md.data$YEAR == year, ]
+      seasonal.mosquito.MLE = mean(year.MLE$IR, na.rm = TRUE) #**# Average is problematic here, but I am not sure of a better approach at this point
+      MLE.vec = c(MLE.vec, seasonal.mosquito.MLE)
+    }
+    mean.seasonal.mosquito.MLE = mean(MLE.vec, na.rm = TRUE)
+    statewide.results$seasonal.mosquito.MLE = mean.seasonal.mosquito.MLE
+    statewide.distributions$seasonal.mosquito.MLE = mean.seasonal.mosquito.MLE
+  }
+
+  # Estimate incidence
+  if ("human.incidence" %in% forecast.targets){
+    mean.incidence = mean.incidence.model(human.data, population.df, mean.annual.cases)
+    incidence.per.year = mean.incidence[[1]]
+    spatial.cases.per.year = mean.incidence[[2]]
+  }
+
+  # Forecast expected week's cases based on previous number of cases in this particular week
+  if ("weeks.cases" %in% forecast.targets){
+    # Get the first 4 characters of weekinquestion and convert to a numeric year
+    focal.year = as.numeric(substring(as.character(weekinquestion), 1,4))
+    focal.month = as.numeric(substring(as.character(weekinquestion),6,7))
+    focal.day = as.numeric(substring(as.character(weekinquestion), 9,10))
+    seasonal.cases = seasonal.incidence(human.data, focal.year, mean.annual.cases)
+
+    # results needs to include these things:
+    #weeks.cases = Districts.With.Cases.Focal.Week, annual.positive.district.weeks = positivesthisyear, multiplier = multiplier, annual.human.cases = human.cases)
+    #new.row = c(model.name, forecast.id, annual.positive.district.weeks, annual.human.cases, multiplier, weeks.cases)
+
+    # Somehow get the focal week out of seasonal cases.
+    week.doy = get.DOY(focal.year, focal.month, focal.day)
+    weeks.cases = seasonal.cases$ESTIMATED.CASES[seasonal.cases$WEEK.START == week.doy]
+
+    if (length(weeks.cases) == 0){
+      m1 = sprintf("No cases returned, week.doy was %s, seasonal cases includes weeks %s",
+                   week.doy, paste(seasonal.cases$WEEK.START, collapse = ", "))
+      stop(m1) #**# Should this be stop or warning? Are 0's filled in?
+    }
+
+    if (length(weeks.cases) > 1){  stop("More than one result was returned for weeks.cases")  }
+    statewide.results$weeks.cases = weeks.cases
+  }
+
+  # Features to add in the future
+  # statewide.results$annual.positive.district.weeks = NA #**# In the future, extract this from the historical mosquito data
+  # # Initialize district-specific results
+  # district.results = list()
+  # district.results$model.name = "DISTRICT.INCIDENCE"
+  # district.results$forecast.id = week.id
+  # district.results$multiplier = NA # Use incidence?
+  # #**# Add additional fields once this is supported
+  #**# Un-comment once district-specific results are supported by the code
+  #forecasts.df = update.df(forecasts.df, district.results, observed.inputs)
+
+  # Update output objects
+  forecasts.df = update.df(forecast.targets, forecasts.df, statewide.results)
+  forecast.distributions = update.distribution(forecast.targets, statewide.results$model.name, statewide.results$forecast.id, forecast.distributions, statewide.distributions)
+
+  return(list(forecasts.df, forecast.distributions))
+}
