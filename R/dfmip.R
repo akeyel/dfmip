@@ -135,6 +135,8 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     compyear2 = arbo.inputs$compyear2
     weathersummaryfile = NA
 
+    #stop("GOT HERE")
+
     # [[1]] is necessary to get just the results. [[2]] returns the inputs, and is for compatibility with the .Rmd format in which ArboMAP was initially developed
     ArboMAP.results = ArboMAP::ArboMAP(human.data, mosq.data, districtshapefile, stratafile, weather.data,
                               weathersummaryfile, maxobservedhumandate, weekinquestion,

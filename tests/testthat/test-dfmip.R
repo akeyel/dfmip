@@ -216,11 +216,6 @@ test_that("ArboMAP model produces the expected outputs", {
   results.path = "DFMIPTESTRESULTS/"
   dir.create(results.path)
 
-  # Trying to diagnose a one-off error that does not appear to be repeating itself
-  #if(!exists('var1name')){
-  #  stop(sprintf("Working dir: %s\nLoading dir:%s", getwd(), sprintf("%s/../../vignettes/dfmip_example_inputs.RData", getwd())))
-  #}
-
   # Test ArboMAP Model for human cases
   dfmip.outputs = suppressWarnings(dfmip.forecast(c("annual.human.cases"), c("ArboMAP"), human.data, mosq.data, weather.data,
                                  districtshapefile, weekinquestion, week.id, results.path,
@@ -278,8 +273,8 @@ test_that("ArboMAP model produces the expected outputs", {
 # Test NULL model
 test_that("NULL model produces the expected outputs", {
   if (Test_All == 0 | Test_All == 2){
-    skip_on_os('windows')
-    #skip("Skipped NULL model tests to save time") #**# Enable when testing code other than the main functions
+    #skip_on_os('windows')
+    skip("Skipped NULL model tests to save time") #**# Enable when testing code other than the main functions
   }
 
   # Load example data to run the models (back out two directories to get into main package directory)
@@ -346,8 +341,8 @@ test_that("NULL model produces the expected outputs", {
 # Test NULL model
 test_that("NULL model produces the expected outputs for mosquitoes", {
   if (Test_All == 0 | Test_All == 2){
-    skip_on_os('windows')
-    #skip("Skipped NULL model mosquito tests to save time") #**# Enable when testing code other than the main functions
+    #skip_on_os('windows')
+    skip("Skipped NULL model mosquito tests to save time") #**# Enable when testing code other than the main functions
   }
 
   # Load example data to run the models (back out two directories to get into main package directory)
@@ -413,8 +408,8 @@ test_that("NULL model produces the expected outputs for mosquitoes", {
 
 test_that("RF1 model produces the expected outputs", {
   if (Test_All == 0){
-    skip_on_os('windows')
-    #skip("Skipped RF1 model tests to save time") #**# Enable when testing code other than the main functions
+    #skip_on_os('windows')
+    skip("Skipped RF1 model tests to save time") #**# Enable when testing code other than the main functions
   }
 
   # Load example data to run the models (back out two directories to get into main package directory)
@@ -481,8 +476,8 @@ test_that("RF1 model produces the expected outputs", {
 # Test multiple outputs
 test_that("hindcasts works for all supported forecast targets simultaneously", {
   if (Test_All == 0 | Test_All == 2){
-    skip_on_os('windows')
-    #skip("Skipped test of all outputs") #**# Enable when testing code other than the main functions
+    #skip_on_os('windows')
+    skip("Skipped test of all outputs") #**# Enable when testing code other than the main functions
   }
 
   # Load example data to run the models (back out two directories to get into main package directory)
