@@ -2,6 +2,9 @@ Package: dfmip
 Type: Package
 Title: Disease Forecast Model Intercomparison Project
 Version: 0.1.0
+Authors@R: c(person("Alexander", "Keyel", role = c("aut", "cre"),
+           email = "akeyel@albany.edu"), person("Christopher", "Williams",
+           role = c('ctb')), person("Christine", "Moffitt", role = c('ctb')))
 Author: Alexander C Keyel <akeyel@albany.edu>
         MLE_IR.R from Williams & Moffitt 2005
 Maintainer: Alexander Keyel <akeyel@albany.edu>
@@ -22,6 +25,8 @@ Description: A simple, consistent interface to multiple
     https://www.tandfonline.com/doi/suppl/10.1577/H04-
     066.1/suppl_file/uahh_a_10264377_sup_0001.txt.
 License: GPL-3
+URL: https://github.com/akeyel/dfmip
+BugReports: https://github.com/akeyel/dfmip/issues
 Encoding: UTF-8
 LazyData: true
 VignetteBuilder: knitr

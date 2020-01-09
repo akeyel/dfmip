@@ -13,6 +13,7 @@ NULL
 #devtools::build_vignettes()
 #devtools::check()
 #devtools::check(build_args = '--no-build-vignettes') # The vignettes were taking too long to build, wanted to skip that step
+#write_codemeta('dfmip') # Writes .json metadata (whatever that means). Also gives opinions about code improvement
 
 # Identify dependencies used in dfmip (see also DESCRIPTION file)
 # Set up package imports for NAMESPACE

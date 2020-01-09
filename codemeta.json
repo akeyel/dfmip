@@ -1,0 +1,179 @@
+{
+  "@context": [
+    "https://doi.org/10.5063/schema/codemeta-2.0",
+    "http://schema.org"
+  ],
+  "@type": "SoftwareSourceCode",
+  "identifier": "dfmip",
+  "description": "A simple, consistent interface to multiple\n    disease forecasting models. It is currently configured to give estimates of\n    human cases from the ArboMAP model and a Random Forest model.\n    This package was developed by Alexander Keyel, Wadsworth Center, New York\n    State Department of Health, Albany, NY, USA. The code development was\n    supported by cooperative agreement 1U01CK000509-01, funded by the Centers\n    for Disease Control and Prevention. Its contents are solely the\n    responsibility of the author and do not necessarily represent the official\n    views of the Centers for Disease Control and Prevention or the Department of\n    Health and Human Services. See README.docx for more details. The MLE_IR.R\n    file was modified with permission from Williams & Moffitt 2005. Estimation\n    of pathogen prevalence in pooled samples using maximum likelihood methods\n    and open source software. Journal of Aquatic Animal Health 17: 386 - 391.\n    Original source code from Williams and Moffitt 2005 is available here:\n    https://www.tandfonline.com/doi/suppl/10.1577/H04-\n    066.1/suppl_file/uahh_a_10264377_sup_0001.txt.",
+  "name": "dfmip: Disease Forecast Model Intercomparison Project",
+  "license": "https://spdx.org/licenses/GPL-3.0",
+  "version": "0.1.0",
+  "programmingLanguage": {
+    "@type": "ComputerLanguage",
+    "name": "R",
+    "version": "3.6.1",
+    "url": "https://r-project.org"
+  },
+  "runtimePlatform": "R version 3.6.1 (2019-07-05)",
+  "author": [
+    {
+      "@type": "Person",
+      "givenName": "Alexander",
+      "familyName": "Keyel",
+      "email": "akeyel@albany.edu"
+    }
+  ],
+  "contributor": [
+    {
+      "@type": "Person",
+      "givenName": "Christopher",
+      "familyName": "Williams"
+    },
+    {
+      "@type": "Person",
+      "givenName": "Christine",
+      "familyName": "Moffitt"
+    }
+  ],
+  "copyrightHolder": {},
+  "funder": {},
+  "maintainer": [
+    {
+      "@type": "Person",
+      "givenName": "Alexander",
+      "familyName": "Keyel",
+      "email": "akeyel@albany.edu"
+    }
+  ],
+  "softwareSuggestions": [
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "rf1",
+      "name": "rf1"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "ArboMAP",
+      "name": "ArboMAP"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "knitr",
+      "name": "knitr",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=knitr"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "rmarkdown",
+      "name": "rmarkdown",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=rmarkdown"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "testthat",
+      "name": "testthat",
+      "version": ">= 2.1.0",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=testthat"
+    }
+  ],
+  "softwareRequirements": [
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "caret",
+      "name": "caret",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=caret"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "dplyr",
+      "name": "dplyr",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=dplyr"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "randomForest",
+      "name": "randomForest",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=randomForest"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "psych",
+      "name": "psych",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=psych"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "identifier": "scoringRules",
+      "name": "scoringRules",
+      "provider": {
+        "@id": "https://cran.r-project.org",
+        "@type": "Organization",
+        "name": "Comprehensive R Archive Network (CRAN)",
+        "url": "https://cran.r-project.org"
+      },
+      "sameAs": "https://CRAN.R-project.org/package=scoringRules"
+    }
+  ],
+  "codeRepository": "https://github.com/akeyel/dfmip",
+  "readme": "https://github.com/akeyel/dfmip/blob/master/README.md",
+  "citation": [
+    {
+      "@type": "SoftwareSourceCode",
+      "author": [
+        {
+          "@type": "Person",
+          "givenName": "Alexander",
+          "familyName": "Keyel",
+          "email": "akeyel@albany.edu"
+        }
+      ],
+      "name": "dfmip: Disease Forecast Model Intercomparison Project",
+      "url": "https://github.com/akeyel/dfmip",
+      "description": "R package version 0.1.0"
+    }
+  ],
+  "issueTracker": "https://github.com/akeyel/dfmip/issues"
+}
