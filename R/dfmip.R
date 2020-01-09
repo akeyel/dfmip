@@ -106,7 +106,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     message("Running NULL models")
 
     null.out = run.null.models(forecast.targets, forecasts.df, forecast.distributions, human.data,
-                            week.id, weekinquestion, model.name = "NULL.MODELS")
+                            week.id, weekinquestion, mosq.data, population.df, model.name = "NULL.MODELS")
 
     forecasts.df = null.out[[1]]
     forecast.distributions = null.out[[2]]
@@ -377,7 +377,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
   # List to hold outputs
   observation.list = list()
   # If seasonal.mosquito.MLE is a forecast target, calculate the observed
-  if ("seasonal.mosqutio.MLE" %in% forecast.targets){
+  if ("seasonal.mosquito.MLE" %in% forecast.targets){
     # Check that rf1 is installed
     if(!require(rf1)){ stop('rf1 package must be installed. You can do this with devtools::install_github("akeyel/rf1")') }
 
@@ -580,7 +580,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
       # Update accuracy.summary
       for (item in names(target.accuracy.metrics)){
         position.index = j + (j* (i-1))
-        accuracy.summary$forecast.target = forecast.target
+        accuracy.summary$forecast.target[position.index] = forecast.target
         accuracy.summary[[item]][position.index] = target.accuracy.metrics[[item]]
       }
     }

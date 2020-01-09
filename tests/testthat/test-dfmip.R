@@ -342,6 +342,73 @@ test_that("NULL model produces the expected outputs", {
   unlink(results.path, recursive = TRUE)
 })
 
+# Test NULL model
+test_that("NULL model produces the expected outputs for mosquitoes", {
+  if (Test_All == 0 | Test_All == 2){
+    skip("Skipped NULL model mosquito tests to save time") #**# Enable when testing code other than the main functions
+  }
+
+  # Load example data to run the models (back out two directories to get into main package directory)
+  load("dfmip_example_inputs.RData")
+  #load("../../vignettes/dfmip_example_inputs.RData")
+
+  # Create a temporary results path
+  results.path = "DFMIPTESTRESULTS/"
+  dir.create(results.path)
+
+  # Test Null Model for human cases
+  dfmip.outputs = suppressWarnings(dfmip.forecast(c("seasonal.mosquito.MLE"), c("NULL.MODELS"), human.data, mosq.data, weather.data,
+                                                  districtshapefile, weekinquestion, week.id, results.path,
+                                                  arbo.inputs = arbo.inputs, observed.inputs = NA,
+                                                  population.df = NA, rf1.inputs = NA))
+
+  forecasts.df = dfmip.outputs[[1]]
+  forecast.distributions = dfmip.outputs[[2]]
+  other.results = dfmip.outputs[[3]]
+
+  # Test forecasts.df object
+  expect_equal(round(forecasts.df$seasonal.mosquito.MLE, 4), 0.0015)
+  # Test distributions object
+  expect_equal(round(forecast.distributions$seasonal.mosquito.MLE[[1]], 4), 0.0015)
+  #expect_equal(other.results, NULL) #**# Do not currently care about this output.
+
+  #skip('Do not do hind casts until forecasts work')
+  # Test ArboMAP hindcasts for human cases
+  hindcasts = suppressWarnings(dfmip.hindcasts(c("seasonal.mosquito.MLE"), c("NULL.MODELS"), c(2015), human.data, mosq.data,
+                                               weather.data, districtshapefile, results.path, arbo.inputs = arbo.inputs,
+                                               population.df = NA, rf1.inputs = NA,
+                                               threshold = 1, percentage = 0.25, id.string = "test",
+                                               season_start_month = 7, weeks_in_season = 1))
+
+  accuracy = hindcasts[[1]]
+  forecasts.df = hindcasts[[2]]
+  forecast.distributions = hindcasts[[3]]
+
+  expect_equal(as.character(accuracy$model), "NULL.MODELS")
+  expect_equal(accuracy$forecast.target, "seasonal.mosquito.MLE")
+  expect_equal(round(accuracy$CRPS,5), 0.00013)
+  expect_equal(round(accuracy$RMSE, 5), 0.00013) #**# Why is RMSE the same as CRPS? CRPS should be absolute error, not RMSE. Is only one data point being evaluated?
+  expect_equal(round(accuracy$Scaled_RMSE, 3), 0.097)
+  expect_equal(accuracy$within_percentage, 1)
+  expect_equal(accuracy$within_threshold, 0)
+  expect_equal(accuracy$within_threshold_or_percentage, 1)
+  expect_equal(accuracy$AUC, NA)
+
+  expect_equal(forecasts.df$MODEL.NAME[1], "NULL.MODELS")
+  #expect_equal(forecasts.df$FORECAST.ID[2], "test:2015-07-12") #**# This produces a weird result. It gives NA, but is not equal to NA.
+  expect_equal(nrow(forecasts.df), 1) # Replace test above to set a clear expectation that only one row will be produced (as it only creates forecasts for the first week, as all subsequent weeks will be the same. #**# We can consider having the behavior produce an estimate for each week, even though they are all equal)
+  expect_equal(forecasts.df$UNIT[1], 'test')
+  expect_equal(forecasts.df$DATE[1], '2015-07-05')
+  expect_equal(forecasts.df$YEAR[1], 2015)
+  expect_equal(round(forecasts.df$seasonal.mosquito.MLE[1], 4), 0.0015)
+
+  expect_equal(round(forecast.distributions[['seasonal.mosquito.MLE']][[1]], 4), 0.0015)
+  expect_error(forecast.distributions[['seasonal.mosquito.MLE']][[2]], "subscript out of bounds")
+
+  unlink(results.path, recursive = TRUE)
+})
+
+
 test_that("RF1 model produces the expected outputs", {
   if (Test_All == 0){
     skip("Skipped RF1 model tests to save time") #**# Enable when testing code other than the main functions
@@ -407,4 +474,61 @@ test_that("RF1 model produces the expected outputs", {
 
   unlink(results.path, recursive = TRUE)
 })
+
+# Test multiple outputs
+test_that("hindcasts works for all supported forecast targets simultaneously", {
+  if (Test_All == 0 | Test_All == 2){
+    skip("Skipped test of all outputs") #**# Enable when testing code other than the main functions
+  }
+
+  # Load example data to run the models (back out two directories to get into main package directory)
+  load("dfmip_example_inputs.RData")
+  #load("../../vignettes/dfmip_example_inputs.RData")
+
+  # Create a temporary results path
+  results.path = "DFMIPTESTRESULTS/"
+  dir.create(results.path)
+
+  # Test hindcasts for multiple forecast targets simultaneously
+  hindcasts = suppressWarnings(dfmip.hindcasts(c('annual.human.cases', "seasonal.mosquito.MLE"), c("NULL.MODELS"), c(2015), human.data, mosq.data,
+                                               weather.data, districtshapefile, results.path, arbo.inputs = arbo.inputs,
+                                               population.df = NA, rf1.inputs = NA,
+                                               threshold = 1, percentage = 0.25, id.string = "test",
+                                               season_start_month = 7, weeks_in_season = 1))
+
+  accuracy = hindcasts[[1]]
+  forecasts.df = hindcasts[[2]]
+  forecast.distributions = hindcasts[[3]]
+
+  expect_equal(as.character(accuracy$model[1]), "NULL.MODELS")
+  expect_equal(accuracy$forecast.target[1], "annual.human.cases")
+  expect_equal(accuracy$forecast.target[2], "seasonal.mosquito.MLE")
+  expect_equal(round(accuracy$CRPS[1],0), 25)
+  expect_equal(round(accuracy$CRPS[2],5), 0.00013)
+  expect_equal(round(accuracy$RMSE[1], 0), 25)
+  expect_equal(round(accuracy$RMSE[2], 5), 0.00013)
+  expect_equal(round(accuracy$Scaled_RMSE[1], 3), 0.386)
+  expect_equal(round(accuracy$Scaled_RMSE[2], 3), 0.097)
+  expect_equal(accuracy$within_percentage[1], 0)
+  expect_equal(accuracy$within_percentage[2], 1)
+  expect_equal(accuracy$within_threshold[1], 0)
+  expect_equal(accuracy$within_threshold[2], 0)
+  expect_equal(accuracy$within_threshold_or_percentage[2], 1)
+  expect_equal(accuracy$AUC[1], NA)
+
+  expect_equal(forecasts.df$MODEL.NAME[1], "NULL.MODELS")
+  #expect_equal(forecasts.df$FORECAST.ID[2], "test:2015-07-12") #**# This produces a weird result. It gives NA, but is not equal to NA.
+  expect_equal(nrow(forecasts.df), 1) # Replace test above to set a clear expectation that only one row will be produced (as it only creates forecasts for the first week, as all subsequent weeks will be the same. #**# We can consider having the behavior produce an estimate for each week, even though they are all equal)
+  expect_equal(forecasts.df$UNIT[1], 'test')
+  expect_equal(forecasts.df$DATE[1], '2015-07-05')
+  expect_equal(forecasts.df$YEAR[1], 2015)
+  expect_equal(round(forecasts.df$seasonal.mosquito.MLE[1], 4), 0.0015)
+  expect_equal(round(forecasts.df$annual.human.cases[1], 1), 88.7)
+
+  expect_equal(round(forecast.distributions[['seasonal.mosquito.MLE']][[1]], 4), 0.0015)
+  expect_equal(round(forecast.distributions[['annual.human.cases']][[1]], 1), 88.7)
+
+  unlink(results.path, recursive = TRUE)
+})
+
 
