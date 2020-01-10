@@ -14,8 +14,22 @@
 #' Data from GridMET for South Dakota
 #' @docType data
 #'
-#' @usage data(weather.data)
-#'
 #' @source \url{https://www.github.com/Ecograph/ArboMAP/}
 #'
-"weather_data"
+"weather.data"
+
+#' Human Data
+#'
+#' Simulated human case data for South Dakota
+#'
+#' @docType data
+#' @source \url{https://www.github.com/Ecograph/ArboMAP/}
+"human.data"
+
+#' Mosquito Data
+#'
+#' Simulated mosquito data for South Dakota
+#'
+#' @docType data
+#' @source \url{https://www.github.com/Ecograph/ArboMAP/}
+"mosq.data"

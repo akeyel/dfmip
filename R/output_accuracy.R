@@ -235,7 +235,7 @@ update.continuous.targets = function(accuracy.metrics, predictions.mat, observat
 
   # Update CRPS
   crps.vec = c()
-  for (i in 1:length(observations.vec)){
+  for (i in seq_len(length(observations.vec))){
     obs = observations.vec[i]
     dat = predictions.mat[i , ]
     crps = crps_sample(obs, dat)
@@ -289,7 +289,7 @@ update.time.targets = function(accuracy.metrics, predictions.mat, observations.v
 
   # Update CRPS
   crps.vec = c()
-  for (i in 1:length(observations.vec)){
+  for (i in seq_len(length(observations.vec))){
     obs = observations.vec[i]
     dat = predictions.mat[i , ]
     crps = crps_sample(obs, dat)

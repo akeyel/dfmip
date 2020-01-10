@@ -152,16 +152,21 @@ test_that("assorted small functions all work as expected", {
   expect_equal(splitter("5:15", ":", 1), 5)
   expect_equal(splitter("1_3", "_", 1), 1)
   expect_equal(splitter("FIVE:2", ":", 1, 1), "FIVE")
-  expect_equal(unname(sapply(c("1:2", "2:3", "4:5"), splitter, ":", 1)), c(1,2,4)) # sapply adds the character vector as names to the output. The unname function removes those. Incorporating the unname call into the function did not fix this, as sapply adds the names, not splitter.
+  expect_equal(unname(vapply(c("1:2", "2:3", "4:5"), splitter, FUN.VALUE = numeric(1), ":", 1)), c(1,2,4))
+  # sapply added the character vector as names to the output. The unname function removes those.
+  # Incorporating the unname call into the function did not fix this, as sapply added the names, not splitter.
+  # Unclear if vapply had the same behavior, I did not test it when I changed the code.
 
   # Test check.models function
   expect_equal(check.models(c("MY.MODEL"), c("MY.MODEL")), NULL)
   expect_error(check.models(c("MY.MODEL"), c("NOT.MY.MODEL")))
 
   # Test check for dependencies
+  if (!require(rf1)){
+    skip('rf1 package must be installed to test check.dependencies function. You can do this with devtools::install_github("akeyel/rf1")')
+  }
   expect_equal(check.dependencies('RF1', c('randomForest', 'psych')), NULL) # Should be no output if everything met. randomForest and psych must be installed on the machine in order to pass this test!
   expect_error(suppressWarning(check.dependencies('RF1', c("SomeMadeUpPackageThatDoesNotExist")))) # It will give a warning that the package does not exist, but we do not want to clutter things up.
-
 
 })
 

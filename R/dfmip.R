@@ -16,6 +16,7 @@ NULL
 #codemetar::write_codemeta('dfmip') # Writes .json metadata (whatever that means). Also gives opinions about code improvement
 #spelling::spell_check_packages()
 #goodpractice::gp()
+#covr::package_coverage() # 29.49% #**# Interesting, because I thought each function was included. Ah. We're skipping most of the tests. Bet it would be different if they were not skipped.
 
 # Identify dependencies used in dfmip (see also DESCRIPTION file)
 # Set up package imports for NAMESPACE
@@ -119,7 +120,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
   if ("ArboMAP" %in% models.to.run){
 
     # Check that ArboMAP is installed
-    if(!require(ArboMAP)){
+    if(!requireNamespace(ArboMAP)){
       stop('ArboMAP package must be installed. You can do this with devtools::install_github("akeyel/ArboMAP/ArboMAP_package", ref = "package_test")')
     }
 
@@ -159,7 +160,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
   # Run the modified ArboMAP model
   if ("ArboMAP.MOD" %in% models.to.run){
     # Check that ArboMAP is installed
-    if(!require(ArboMAP)){
+    if(!requireNamespace(ArboMAP)){
       stop('ArboMAP package must be installed. You can do this with devtools::install_github("akeyel/ArboMAP/ArboMAP_package", ref = "package_test")')
     }
 
@@ -201,7 +202,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
   if ("RF1_C" %in% models.to.run){
 
     # Check that rf1 is installed
-    if(!require(rf1)){
+    if(!requireNamespace(rf1)){
       stop('rf1 package must be installed. You can do this with devtools::install_github("akeyel/rf1")')
     }
 
@@ -238,7 +239,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     message("Running Random Forest 1 model")
 
     # Check that rf1 is installed
-    if(!require(rf1)){
+    if(!requireNamespace(rf1)){
       stop('rf1 package must be installed. You can do this with devtools::install_github("akeyel/rf1")')
     }
 
@@ -384,7 +385,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
   # If seasonal.mosquito.MLE is a forecast target, calculate the observed
   if ("seasonal.mosquito.MLE" %in% forecast.targets){
     # Check that rf1 is installed
-    if(!require(rf1)){ stop('rf1 package must be installed. You can do this with devtools::install_github("akeyel/rf1")') }
+    if(!requireNamespace(rf1)){ stop('rf1 package must be installed. You can do this with devtools::install_github("akeyel/rf1")') }
 
     md.data = rf1::calculate.MLE.v2(mosq.data, "annual")
     #**# Should be able to use a similar approach to estimate peak. Should make it easy to adapt the RF model to estimate a peak MLE as well.
@@ -432,7 +433,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
 
 
     # Loop through weeks to get a new forecast for each week for ArboMAP
-    for (i in 1:length(month.vec)){
+    for (i in seq_len(length(month.vec))){
 
       month = month.vec[i]
       day = day.vec[i]
@@ -516,7 +517,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
   accuracy.summary = data.frame(model = rep(models.to.run, length(forecast.targets)))
 
   # Loop through forecast targets
-  for (i in 1:length(forecast.targets)){
+  for (i in seq_len(length(forecast.targets))){
     forecast.target = forecast.targets[i]
     #message("Checking distributions that have been output")
     #message(str(forecast.distributions))
@@ -529,7 +530,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
     models = vapply(keys, splitter, FUN.VALUE = numeric(1), ':', 1, as.string = 1)
 
     # Calculate accuracy over all forecasts for each model
-    for (j in 1:length(models.to.run)){
+    for (j in seq_len(length(models.to.run))){
       model = models.to.run[j]
 
       model.regex = sprintf("\\b%s\\b", model) # Add breaks to search for ONLY the model, and not any that have the model as part of the name.
@@ -544,7 +545,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
       observations.vec = c()
 
       # Create forecast distributions matrix and observation vector
-      for (k in 1:length(model.index)){
+      for (k in seq_len(length(model.index))){
         this.index.value = model.index[k]
         this.key = keys[this.index.value]
         #message(this.key)
@@ -866,7 +867,7 @@ mean.incidence.model = function(human.data, population.df, cases.per.year, n.yea
   spatial.cases.per.year$DISTRICT.INCIDENCE = NA
 
   # Loop over districts
-  for (i in 1:length(spatial.cases.per.year$SPATIAL)){
+  for (i in seq_len(length(spatial.cases.per.year$SPATIAL))){
     district = as.character(spatial.cases.per.year$SPATIAL[i])
     district.population = spatial.cases.per.year$TOTAL_POPULATION[i]
     human.data.subset = human.data[as.character(human.data$district) == district, ]
@@ -1096,7 +1097,7 @@ check.dependencies = function(model.name, packages){
   m = ""
   is.error = 0
   for (package.name in packages){
-    if (!require(package.name, character.only = TRUE)){
+    if (!requireNamespace(package.name, character.only = TRUE)){
       this.m = sprintf(m.base, package.name, model.name, package.name)
       m = sprintf("%s\n%s", m, this.m)
       is.error = 1
@@ -1326,7 +1327,7 @@ run.null.models = function(forecast.targets, forecasts.df, forecast.distribution
   mean.seasonal.mosquito.MLE = NA
   if ("seasonal.mosquito.MLE" %in% forecast.targets){
     # Check that rf1 is installed
-    if(!require(rf1)){ stop('rf1 package must be installed. You can do this with devtools::install_github("akeyel/rf1")') }
+    if(!requireNamespace(rf1)){ stop('rf1 package must be installed. You can do this with devtools::install_github("akeyel/rf1")') }
 
     md.data = rf1::calculate.MLE.v2(mosq.data, "annual")
     MLE.vec = c()

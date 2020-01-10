@@ -23,40 +23,30 @@ In this example, the data are pre-loaded into an RData object. Each of the objec
 
 ```{r LoadData}
 
-data("dfmip_example_inputs")
-
 # # Load & compile weather data 
 # weatherpathstr = "weather data/"
 # weathersummaryfile = "weather data summary file.csv"
 # weather.data = ArboMAP::read.weather.data(weatherpathstr, weathersummaryfile) # Compile the weather data into an R object for the code
 # weather.data$district = ArboMAP::simplifynames(weather.data$district) # Convert the county names to match the mosquito and human data
 
-data("weather_data")
-
 # Show format of weather data (first 5 rows)
-knitr::kable(weather_data[1:5, ])
-
-
-data("weather.data")
-
-# Show format of weather data (first 5 rows)
-knitr::kable(weather.data[1:5, ])
+knitr::kable(dfmip::weather.data[1:5, ])
 
 # Load human data
 # human.data.file = "human case data/simulated human case data.csv"
 # human.data = read.csv(human.data.file)
 # Show format of human data (first 5 rows)
-knitr::kable(human.data[1:5, ])
+knitr::kable(dfmip::human.data[1:5, ])
 
 
 # Load mosquito data
 # mosq.data.file = "mosquito data/simulated mosquito tests.csv"
 # mosq.data = read.csv(mosq.data.file)
 # Show format of mosquito data (first 5 rows)
-knitr::kable(mosq.data[1:5, ])
+knitr::kable(dfmip::mosq.data[1:5, ])
 
 # Read in Shapefile with district polygons
-# districtshapefile.file = "shapefile/cb_2014_us_county_5m - in EPSG 5070 - only SD.shp"
+# districtshapefile = "shapefile/cb_2014_us_county_5m - in EPSG 5070 - only SD.shp"
 #**# NOT INCLUDED IN PACKAGE, DOWNLOAD FROM https://github.com/EcoGRAPH/ArboMAP/tree/master/shapefile/ (All 5 files are part of the shapefile)
 
 # Load population data for calculation of incidence (optional)
