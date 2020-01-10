@@ -1,4 +1,6 @@
 # dfmip
+[![Build Status](https://travis-ci.org/akeyel/dfmip.svg?branch=master)](https://travis-ci.org/akeyel/dfmip)
+
 Disease Forecast Model Intercomparison Project
 
 Title: dfmip: Disease Forecast Model Intercomparison Project
@@ -20,5 +22,3 @@ Acknowledgements:   The code development was supported by cooperative agreement 
 License: GPL 3; https://www.gnu.org/licenses/gpl-3.0.en.html
 
 URL: https://github.com/akeyel/dfmip
-
-[![Build Status](https://travis-ci.org/akeyel/dfmip.svg?branch=master)](https://travis-ci.org/akeyel/dfmip)
