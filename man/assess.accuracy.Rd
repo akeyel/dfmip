@@ -11,7 +11,7 @@ assess.accuracy(predictions.mat, observations.vec, forecast.target,
 \item{predictions.mat}{A matrix where each row corresponds to a separate
 forecast, and every column corresponds to a forecast realization. In the
 case of point forecasts, there will be a single column. In the case of
-probablistic forecasts, there will likely be a thousand or more columns.
+probabilistic forecasts, there will likely be a thousand or more columns.
 Note that these are realizations, and not the probabilities associated with
 categories.}
 
@@ -29,7 +29,7 @@ categories.}
 
 \item{threshold}{For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.}
 
-\item{percentage}{For continuous and discrete forecasts, if the prediction is wihtin the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.}
+\item{percentage}{For continuous and discrete forecasts, if the prediction is within the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.}
 }
 \value{
 accuracy.metrics A list containing accuracy information. The list is

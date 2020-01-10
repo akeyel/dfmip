@@ -15,7 +15,7 @@ Author Affiliations: Wadsworth Center, New York State Department of Health, Alba
 
 Description: A package to provide a simple, consistent interface to multiple disease forecasting models. 
 
-Acknowledgements:   The code development was supported by cooperative agreement 1U01CK000509-01, funded by the Centers for Disease Control and Prevention. Its contents are solely the responsibility of the authors and do not necessarily represent the official views of the Centers for Disease  Control and Prevention or the Department of Health and Human Services.
+Acknowledgements:   The code development was supported by cooperative agreement 1U01CK000509-01, funded by the Centers for Disease Control and Prevention,  and by the National Socio-Environmental Synthesis Center (SESYNC) under funding received from the National Science Foundation DBI-1639145.. Its contents are solely the responsibility of the authors and do not necessarily represent the official views of the Centers for Disease  Control and Prevention or the Department of Health and Human Services.
 
 License: GPL 3; https://www.gnu.org/licenses/gpl-3.0.en.html
 

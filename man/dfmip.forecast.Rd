@@ -20,7 +20,7 @@ ArboMAP \tab Development version ArboMAP forecasts, see details section.\cr
 ArboMAP.MOD \tab Modified version of ArboMAP model.\cr
 RF1_C \tab Random Forest model, climate inputs only (i.e. equivalent inputs to ArboMAP).\cr
 RF1_A \tab Random Forest model, all available inputs.\cr  }
-Note these entries are case-sensitive and are run by keyword, so run in a fixed order (NULL.MODELS, ArboMAP, ArbMAP.MOD, RF1_C, RF1_A),
+Note these entries are case-sensitive and are run by keyword, so run in a fixed order (NULL.MODELS, ArboMAP, ArboMAP.MOD, RF1_C, RF1_A),
 regardless of the order specified in the models.to.run vector.}
 
 \item{human.data}{Data on human cases of the disease. Must be formatted with two columns: district and date (in format M/D/Y, with forward slashes as delimiters). An optional 'year' column may also be present. If absent, it will be generated from the date column. The district column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case.

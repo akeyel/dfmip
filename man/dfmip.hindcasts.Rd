@@ -21,7 +21,7 @@ ArboMAP \tab Development version ArboMAP forecasts, see details section.\cr
 ArboMAP.MOD \tab Modified version of ArboMAP model.\cr
 RF1_C \tab Random Forest model, climate inputs only (i.e. equivalent inputs to ArboMAP).\cr
 RF1_A \tab Random Forest model, all available inputs.\cr  }
-Note these entries are case-sensitive and are run by keyword, so run in a fixed order (NULL.MODELS, ArboMAP, ArbMAP.MOD, RF1_C, RF1_A),
+Note these entries are case-sensitive and are run by keyword, so run in a fixed order (NULL.MODELS, ArboMAP, ArboMAP.MOD, RF1_C, RF1_A),
 regardless of the order specified in the models.to.run vector.}
 
 \item{focal.years}{The years for which hindcasts will be made. Hindcasts will use all prior years as training data.}
@@ -46,7 +46,7 @@ The read.weather.data function from ArboMAP is a useful way to process one or mo
 
 \item{threshold}{For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.}
 
-\item{percentage}{For continuous and discrete forecasts, if the prediction is wihtin the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.}
+\item{percentage}{For continuous and discrete forecasts, if the prediction is within the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.}
 
 \item{id.string}{An ID to include in the forecast ID for this hindcast run (e.g., state)}
 

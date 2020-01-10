@@ -2,7 +2,7 @@
 % Please edit documentation in R/dfmip.R
 \name{splitter}
 \alias{splitter}
-\title{Split strings using strsplit in a way that can easily be used within sapply}
+\title{Split strings using strsplit in a way that can easily be used within vapply}
 \usage{
 splitter(string, delimiter, position, as.string = 0)
 }
@@ -17,5 +17,5 @@ To retain multiple pieces, do a separate function call for each piece}
 \item{as.string}{0 Result will be numeric, 1 Result will be string}
 }
 \description{
-Split strings using strsplit in a way that can easily be used within sapply
+Split strings using strsplit in a way that can easily be used within vapply
 }

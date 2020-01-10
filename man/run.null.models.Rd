@@ -27,6 +27,9 @@ run.null.models(forecast.targets, forecasts.df, forecast.distributions,
 
 \item{model.name}{The name of the model to use in forecasts.df and forecast.distributions}
 }
+\value{
+A list consisting of a data frame with forecast results and a list of forecast distributions
+}
 \description{
 Create simple null models for comparison
 }

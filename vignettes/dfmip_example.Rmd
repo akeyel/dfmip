@@ -18,38 +18,26 @@ vignette: >
 
 ## II. SET UP INPUTS
 
-First: Load the ArboMAP and dfmip packages. If they are not installed, they will be installed from GitHub
-
-```{r LoadPackages, echo = TRUE, message = FALSE}
-if (!require(ArboMAP)){
-  #install.packages("C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/CODE/ArboMAP/ArboMAP/ArboMAP_0.1.0.tar.gz", repos = NULL)
-  devtools::install_github("akeyel/ArboMAP/ArboMAP_package", ref = "package_test")
-  library(ArboMAP) # !require can't pull ArboMAP, so it will return a message "No Package called ArboMAP" because it looks for it on CRAN
-}
-if (!require(dfmip)){
-  #install.packages("C:/Users/ak697777/University at Albany - SUNY/Elison Timm, Oliver - CCEID/CODE/dfmip_0.1.0.tar.gz", repos = NULL)
-  devtools::install_github("akeyel/dfmip")
-  library(dfmip)
-}
-
-```
 
 In this example, the data are pre-loaded into an RData object. Each of the objects can be read in from file, and example code for this can be found in the comments. The example code assumes the files/folders are in the ArboMAP directory following the ArboMAP structure (however this structure is not necessary, and any file can be reached by specifying the full path to the file). Note that the mosquito and human data used in this example are SIMULATED and do not correspond to real infection rates and cases. 
 
 ```{r LoadData}
 
-example.inputs = "dfmip_example_inputs.RData"
-#stop(getwd())
-load(example.inputs)
-
-# Specify the models to run
-models.to.run = c("RF1_C","ArboMAP", "NULL.MODELS")
+data("dfmip_example_inputs")
 
 # # Load & compile weather data 
 # weatherpathstr = "weather data/"
 # weathersummaryfile = "weather data summary file.csv"
 # weather.data = ArboMAP::read.weather.data(weatherpathstr, weathersummaryfile) # Compile the weather data into an R object for the code
 # weather.data$district = ArboMAP::simplifynames(weather.data$district) # Convert the county names to match the mosquito and human data
+
+data("weather_data")
+
+# Show format of weather data (first 5 rows)
+knitr::kable(weather_data[1:5, ])
+
+
+data("weather.data")
 
 # Show format of weather data (first 5 rows)
 knitr::kable(weather.data[1:5, ])
@@ -69,6 +57,7 @@ knitr::kable(mosq.data[1:5, ])
 
 # Read in Shapefile with district polygons
 # districtshapefile.file = "shapefile/cb_2014_us_county_5m - in EPSG 5070 - only SD.shp"
+#**# NOT INCLUDED IN PACKAGE, DOWNLOAD FROM https://github.com/EcoGRAPH/ArboMAP/tree/master/shapefile/ (All 5 files are part of the shapefile)
 
 # Load population data for calculation of incidence (optional)
 # population.df = NA # This optional input  is omitted in this vignette
@@ -119,8 +108,9 @@ results.path = "FORECAST_RESULTS/"
 # Define what should be evaluated
 forecast.targets = c("annual.human.cases") #, "seasonal.mosquito.MLE")
 
-models.to.run = c("RF1_C","ArboMAP", "NULL.MODELS")
-# NOT RUN TO SAVE PROCESSING TIME
+#models.to.run = c("RF1_C","ArboMAP", "NULL.MODELS")
+models.to.run = c("NULL.MODELS")
+# NOT RUN TO SAVE PROCESSING TIME & AVOID ERRORS if the ArboMAP or RF1 packages are not installed
 #dfmip.outputs = dfmip.forecast(forecast.targets, models.to.run, human.data, mosq.data, weather.data,
 #                          districtshapefile, weekinquestion, week.id, results.path,
 #                          arbo.inputs = arbo.inputs, observed.inputs = observed.inputs,

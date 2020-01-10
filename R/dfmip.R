@@ -13,7 +13,9 @@ NULL
 #devtools::build_vignettes()
 #devtools::check()
 #devtools::check(build_args = '--no-build-vignettes') # The vignettes were taking too long to build, wanted to skip that step
-#write_codemeta('dfmip') # Writes .json metadata (whatever that means). Also gives opinions about code improvement
+#codemetar::write_codemeta('dfmip') # Writes .json metadata (whatever that means). Also gives opinions about code improvement
+#spelling::spell_check_packages()
+#goodpractice::gp()
 
 # Identify dependencies used in dfmip (see also DESCRIPTION file)
 # Set up package imports for NAMESPACE
@@ -58,7 +60,7 @@ NULL
 #' ArboMAP.MOD \tab Modified version of ArboMAP model.\cr
 #' RF1_C \tab Random Forest model, climate inputs only (i.e. equivalent inputs to ArboMAP).\cr
 #' RF1_A \tab Random Forest model, all available inputs.\cr  }
-#' Note these entries are case-sensitive and are run by keyword, so run in a fixed order (NULL.MODELS, ArboMAP, ArbMAP.MOD, RF1_C, RF1_A),
+#' Note these entries are case-sensitive and are run by keyword, so run in a fixed order (NULL.MODELS, ArboMAP, ArboMAP.MOD, RF1_C, RF1_A),
 #' regardless of the order specified in the models.to.run vector.
 #' @param human.data Data on human cases of the disease. Must be formatted with two columns: district and date (in format M/D/Y, with forward slashes as delimiters). An optional 'year' column may also be present. If absent, it will be generated from the date column. The district column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case.
 #' #**# WHAT IF THESE DATA ARE MISSING? I.E. just making a mosquito forecast with RF1?
@@ -349,7 +351,7 @@ NULL
 #' ArboMAP.MOD \tab Modified version of ArboMAP model.\cr
 #' RF1_C \tab Random Forest model, climate inputs only (i.e. equivalent inputs to ArboMAP).\cr
 #' RF1_A \tab Random Forest model, all available inputs.\cr  }
-#' Note these entries are case-sensitive and are run by keyword, so run in a fixed order (NULL.MODELS, ArboMAP, ArbMAP.MOD, RF1_C, RF1_A),
+#' Note these entries are case-sensitive and are run by keyword, so run in a fixed order (NULL.MODELS, ArboMAP, ArboMAP.MOD, RF1_C, RF1_A),
 #' regardless of the order specified in the models.to.run vector.
 #' @param focal.years The years for which hindcasts will be made. Hindcasts will use all prior years as training data.
 #' @param human.data Data on human cases of the disease. Must be formatted with two columns: district and date. The district column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case. The date column must be in format M/D/Y, with forward slashes as delimiters
@@ -363,7 +365,7 @@ NULL
 #' @param population.df Census information for calculating incidence. Can be set to 'none' or omitted from the function call #**# NEEDS FORMAT INSTRUCTIONS
 #' @param rf1.inputs Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}. If this model is not included, this should be set to 'none' or omitted from the function call #**# LINK TO AN OBJECT WITH MORE DETAILS
 #' @param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.
-#' @param percentage For continuous and discrete forecasts, if the prediction is wihtin the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.
+#' @param percentage For continuous and discrete forecasts, if the prediction is within the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.
 #' @param id.string An ID to include in the forecast ID for this hindcast run (e.g., state)
 #' @param season_start_month The first month of the mosquito season, as a number. E.g., July would be 7.
 #' @param weeks_in_season The number of weeks to sample
@@ -406,7 +408,8 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
     year.positive.districts = NA #**# THIS WAS NOT BEING CALCULATED CORRECTLY!
 
     # Format data to ensure compatibility with code below
-    human.data$year = sapply(as.character(human.data$date), splitter,  "/", 3)
+    #human.data$year = sapply(as.character(human.data$date), splitter,  "/", 3)
+    human.data$year = vapply(as.character(human.data$date), splitter, FUN.VALUE = numeric(1),  "/", 3)
     mosq.data$date = mosq.data$col_date
 
     if ("annual.human.cases" %in% forecast.targets){
@@ -522,7 +525,8 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
     #message(names(target.distributions))
 
     keys = names(target.distributions)
-    models = sapply(keys, splitter, ':', 1, as.string = 1)
+    #models = sapply(keys, splitter, ':', 1, as.string = 1)
+    models = vapply(keys, splitter, FUN.VALUE = numeric(1), ':', 1, as.string = 1)
 
     # Calculate accuracy over all forecasts for each model
     for (j in 1:length(models.to.run)){
@@ -602,6 +606,8 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
 #' @param forecast.targets The targets to include in the output data frame. See \code{\link{dfmip.forecast}} for options.
 #' @param forecasts.df The data frame object to contain the results from dfmip
 #' @param results.object The results object to be integrated into forecasts.df
+#'
+#' @noRd
 #'
 update.df = function(forecast.targets, forecasts.df, results.object){
 
@@ -683,6 +689,8 @@ update.df = function(forecast.targets, forecasts.df, results.object){
 #'
 #' @return forecast.distributions A list object containing forecast probability distributions organized by forecast.keys consisting of model names and forecast IDs.
 #'
+#' @noRd
+#'
 update.distribution = function(forecast.targets, model.name, forecast.id, forecast.distributions, results.object){
 
   # #' annual.human.cases \tab Number of human cases\cr
@@ -751,7 +759,7 @@ update.distribution = function(forecast.targets, model.name, forecast.id, foreca
   return(forecast.distributions)
 }
 
-#' Split strings using strsplit in a way that can easily be used within sapply
+#' Split strings using strsplit in a way that can easily be used within vapply
 #'
 #' @param string The string to be split
 #' @param delimiter What to use to split the string
@@ -793,17 +801,26 @@ date.subset = function(df, end.year, end.month, end.day, date.format){
   if (date.format == 1){
     # add df$month and df$day columns
     df$datestr = as.character(df$date) # Speeds up the splitting process
-    df$year = sapply(df$datestr, splitter, "-", 1)
-    df$month = sapply(df$datestr, splitter, '-', 2)
-    df$day = sapply(df$datestr, splitter, "-", 3)
+    #df$year = sapply(df$datestr, splitter, "-", 1)
+    #df$month = sapply(df$datestr, splitter, '-', 2)
+    #df$day = sapply(df$datestr, splitter, "-", 3)
+
+    df$year = vapply(df$datestr, splitter, FUN.VALUE = numeric(1), "-", 1)
+    df$month = vapply(df$datestr, splitter, FUN.VALUE = numeric(1), '-', 2)
+    df$day = vapply(df$datestr, splitter, FUN.VALUE = numeric(1), "-", 3)
   }
 
   # Format for human and mosquito data
   if (date.format == 2){
     df$datestr = as.character(df$date)
-    df$year = sapply(df$datestr, splitter, "/", 3)
-    df$month = sapply(df$datestr, splitter, "/", 1)
-    df$day = sapply(df$datestr, splitter, '/', 2)
+    #df$year = sapply(df$datestr, splitter, "/", 3)
+    #df$month = sapply(df$datestr, splitter, "/", 1)
+    #df$day = sapply(df$datestr, splitter, '/', 2)
+
+    df$year = vapply(df$datestr, splitter, FUN.VALUE = numeric(1), "/", 3)
+    df$month = vapply(df$datestr, splitter, FUN.VALUE = numeric(1), "/", 1)
+    df$day = vapply(df$datestr, splitter, FUN.VALUE = numeric(1), '/', 2)
+
   }
 
   #df$month = sapply(df$date, splitter2, 6,7) #**# Rate limiter was the date format, not the function used to split the date field. #**# splitter2 function moved to junk.R in dfmip_development folder (a local folder on ACK's machine)
@@ -833,6 +850,8 @@ date.subset = function(df, end.year, end.month, end.day, date.format){
 #'@param population.df A data frame with districts (counties) and their populations. A column labeled SPATIAL should contain the county/district information, while population should be in a TOTAL_POPULATION column.
 #'@param cases.per.year Average number of cases per year
 #'@param n.years Number of years in human.data
+#'
+#' @noRd
 #'
 mean.incidence.model = function(human.data, population.df, cases.per.year, n.years){
 
@@ -879,11 +898,15 @@ mean.incidence.model = function(human.data, population.df, cases.per.year, n.yea
 #' Can apply this at the district level by multiplying the estimates by the mean annual cases for each district.
 #' But likely too few in NYS for that to be particularly useful?
 #'
+#' @noRd
+#'
 seasonal.incidence = function(human.data, focal.year, mean.annual.cases, week.start){
 
   # Convert date to day of year
-  human.data$month = sapply(as.character(human.data$date), splitter, "/", 1)
-  human.data$day = sapply(as.character(human.data$date), splitter, "/", 2)
+  #human.data$month = sapply(as.character(human.data$date), splitter, "/", 1)
+  #human.data$day = sapply(as.character(human.data$date), splitter, "/", 2)
+  human.data$month = vapply(as.character(human.data$date), splitter, FUN.VALUE = numeric(1), "/", 1)
+  human.data$day = vapply(as.character(human.data$date), splitter, FUN.VALUE = numeric(1), "/", 2)
   human.data$doy = mapply(get.DOY, human.data$year, human.data$month, human.data$day)
 
   hist(human.data$doy, breaks = seq(1,366))
@@ -1066,6 +1089,8 @@ get.days = function(year){
 #' @param model.name The name of the model to check dependencies for
 #' @param packages The packages required for the model in question
 #'
+#' @noRd
+#'
 check.dependencies = function(model.name, packages){
   m.base = "Please install package '%s' to run the %s model (install.packages('%s'))"
   m = ""
@@ -1206,6 +1231,8 @@ get_sampling_weeks = function(year, season_start_month, weeks_in_season, sample_
 #' @param vector An input vector to check
 #' @param test.name A name for the test location in the code
 #'
+#' @noRd
+#'
 test.type = function(vector, test.name){
   message(test.name)
   for (item in vector){
@@ -1223,6 +1250,8 @@ test.type = function(vector, test.name){
 #'
 #' @param models.to.run The list of models to be run
 #' @param models.in.dfmip The list of models scripted in dfmip, as a vector
+#'
+#' @noRd
 #'
 #' @return NONE: this function throws an error if something is wrong.
 check.models = function(models.to.run, models.in.dfmip){
@@ -1257,6 +1286,9 @@ check.models = function(models.to.run, models.in.dfmip){
 #' @param mosq.data Only required if a mosquito output is among the forecast targets. See \code{\link{dfmip.forecast}}
 #' @param population.df A data frame with districts (counties) and their populations. A column labeled SPATIAL should contain the county/district information, while population should be in a TOTAL_POPULATION column. Only required if incidence calculations are desired.
 #' @param model.name The name of the model to use in forecasts.df and forecast.distributions
+#'
+#' @return A list consisting of a data frame with forecast results and a list of forecast distributions
+#'
 run.null.models = function(forecast.targets, forecasts.df, forecast.distributions, human.data,
                            week.id, weekinquestion, mosq.data = NA, population.df = NA, model.name = "NULL.MODELS"){
   # Initialize statewide results
@@ -1274,7 +1306,8 @@ run.null.models = function(forecast.targets, forecasts.df, forecast.distribution
 
   # Create the year column, if it is missing
   if (length(human.data$year) == 0){
-    human.data$year = sapply(as.character(human.data$date), splitter,  "/", 3)
+    #human.data$year = sapply(as.character(human.data$date), splitter,  "/", 3)
+    human.data$year = vapply(as.character(human.data$date), splitter, FUN.VALUE = numeric(1),  "/", 3)
   }
 
   # Calculate total number of years

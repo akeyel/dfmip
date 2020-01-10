@@ -23,7 +23,7 @@ NULL
 #'@param predictions.mat A matrix where each row corresponds to a separate
 #'  forecast, and every column corresponds to a forecast realization. In the
 #'  case of point forecasts, there will be a single column. In the case of
-#'  probablistic forecasts, there will likely be a thousand or more columns.
+#'  probabilistic forecasts, there will likely be a thousand or more columns.
 #'  Note that these are realizations, and not the probabilities associated with
 #'  categories.
 #'@param observations.vec A vector where each entry corresponds to the observed outcome for the corresponding row in predictions.mat.
@@ -37,7 +37,7 @@ NULL
 #' \item positive_pools_binary
 #' \item peak_timing }
 #'@param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.
-#'@param percentage For continuous and discrete forecasts, if the prediction is wihtin the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.
+#'@param percentage For continuous and discrete forecasts, if the prediction is within the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.
 #'
 #'@return accuracy.metrics A list containing accuracy information. The list is
 #'   structured \tabular{ll}{
@@ -131,6 +131,8 @@ assess.accuracy = function(predictions.mat, observations.vec, forecast.target, t
 #' @param discrete.targets Discrete value targets, currently 'number_positive_pools'
 #' @param time.targets Time related targets, currently 'peak_timing'.
 #'
+#' @noRd
+#'
 setup.t.p.defaults = function(forecast.target, threshold, percentage,
                               binary.targets, continuous.targets,
                               discrete.targets, time.targets){
@@ -184,7 +186,7 @@ setup.t.p.defaults = function(forecast.target, threshold, percentage,
 #' @param predictions.mat A matrix where each row corresponds to a separate
 #'  forecast, and every column corresponds to a forecast realization. In the
 #'  case of point forecasts, there will be a single column. In the case of
-#'  probablistic forecasts, there will likely be a thousand or more columns.
+#'  probabilistic forecasts, there will likely be a thousand or more columns.
 #'  Note that these are realizations, and not the probabilities associated with
 #'  categories.
 #' @param observations.vec A vector where each entry corresponds to the observed outcome for the corresponding row in predictions.mat.
@@ -192,6 +194,8 @@ setup.t.p.defaults = function(forecast.target, threshold, percentage,
 #' @param percentage For continuous and discrete forecasts, if the prediction is within the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.
 #'
 #' @return accuracy.metrics An updated accuracy.metrics object
+#'
+#' @noRd
 #'
 update.continuous.targets = function(accuracy.metrics, predictions.mat, observations.vec, threshold, percentage){
   #**# SCRIPT PIECES
@@ -257,13 +261,15 @@ update.continuous.targets = function(accuracy.metrics, predictions.mat, observat
 #' @param predictions.mat A matrix where each row corresponds to a separate
 #'  forecast, and every column corresponds to a forecast realization. In the
 #'  case of point forecasts, there will be a single column. In the case of
-#'  probablistic forecasts, there will likely be a thousand or more columns.
+#'  probabilistic forecasts, there will likely be a thousand or more columns.
 #'  Note that these are realizations, and not the probabilities associated with
 #'  categories.
 #' @param observations.vec A vector where each entry corresponds to the observed outcome for the corresponding row in predictions.mat.
 #' @param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.
 #'
 #' @return accuracy.metrics An updated accuracy.metrics object
+#'
+#' @noRd
 #'
 update.time.targets = function(accuracy.metrics, predictions.mat, observations.vec, threshold){
   #**# SCRIPT PIECES
