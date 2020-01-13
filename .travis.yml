@@ -6,6 +6,7 @@ addons:
     packages:
       - libudunits2-dev
       - gdal-bin
+      - libgdal-dev
 
 r_binary_packages:
   - rgdal
