@@ -5,9 +5,12 @@ addons:
   apt:
     packages:
       - libudunits2-dev
+      - gdal-bin
+
+r_binary_packages:
+  - rgdal
 
 r:
-    - oldrel
     - release
     - devel
 
