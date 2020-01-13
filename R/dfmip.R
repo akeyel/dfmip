@@ -93,6 +93,9 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
   models.in.dfmip = c("NULL.MODELS", "ArboMAP", "ArboMAP.MOD", "RF1_C", "RF1_A")
   check.models(models.to.run, models.in.dfmip)
 
+  # Check which models support the selected forecast targets
+  check.models.and.targets(models.to.run, forecast.targets)
+
   # Initialize the forecast object
   forecasts.df = NA
   #message(paste(observed.inputs, collapse = ", "))
@@ -155,6 +158,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
     forecasts.df = update.df(forecast.targets, forecasts.df, ArboMAP.results)
     forecast.distributions = update.distribution(forecast.targets, ArboMAP.results$model.name, ArboMAP.results$forecast.id, forecast.distributions, ArboMAP.distributions)
+
   }
 
   # Run the modified ArboMAP model
@@ -639,7 +643,12 @@ update.df = function(forecast.targets, forecasts.df, results.object){
 
 
   # Create the results object if it does not already exist
-  if (is.na(forecasts.df)){
+  if (length(forecasts.df) < 2){
+    # Confirm that this was triggered by an NA
+    # The length step is needed to avoid a warning about length > 1 when the forecasts.df object exists.
+    # Minimum length should be 5 for 5 fields, so <2 should never happen with a filled forecasts.df object
+    if (!is.na(forecasts.df)){ stop("Something went very wrong with the update.df function") }
+
     forecasts.df = data.frame(MODEL.NAME = model.name, FORECAST.ID = as.character(forecast.id), UNIT = as.character(UNIT), DATE = as.character(date), YEAR = year)
 
     if ("annual.human.cases" %in% forecast.targets){  forecasts.df$annual.human.cases = annual.human.cases }
@@ -1391,3 +1400,46 @@ run.null.models = function(forecast.targets, forecasts.df, forecast.distribution
 
   return(list(forecasts.df, forecast.distributions))
 }
+
+
+#' Check that forecast targets are supported by models
+#'
+#' Provide a clear and up-front documentation of which models support a given forecast target, and which do not.
+#'
+#' @param models.to.run A string vector of the models to run. See \code{\link{dfmip.forecasts}} for more details.
+#' @param forecast.targets What the model is forecasting. See \code{\link{dfmip.forecast}} for more details.
+#'
+#' @return NULL
+#'
+check.models.and.targets = function(models.to.run, forecast.targets){
+
+  # Define targets once to reduce issues with typos #**# Should I get these from somewhere external, so they only have to be changed in one place?
+  ahc = 'annual.human.cases'
+  smMLE = 'seasonal.mosquito.MLE'
+
+  # ArboMAP
+  arbomap.supported.targets = c(ahc)
+
+  for (model in models.to.run){
+    for (target in forecast.targets){
+
+      if (model == "RF1_A" | "RF1_C" | "NULL.MODELS"){
+        supported.targets = c(ahc, smMLE)
+      }
+
+      if (model == "ArboMAP" | "ArboMAP_mod"){
+        supported.targets = c(ahc)
+      }
+
+      # Add message that seasonal mosquito MLE is not currently supported by our version of ArboMAP
+      if (!target %in% supported.targets){
+        message(sprintf("%s not supported for %s. Estimates will not be produced for this model", target, model))
+      }
+
+
+    }
+  }
+
+}
+
+

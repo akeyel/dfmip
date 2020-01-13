@@ -168,6 +168,9 @@ test_that("assorted small functions all work as expected", {
   expect_equal(check.dependencies('RF1', c('randomForest', 'psych')), NULL) # Should be no output if everything met. randomForest and psych must be installed on the machine in order to pass this test!
   expect_error(suppressWarning(check.dependencies('RF1', c("SomeMadeUpPackageThatDoesNotExist")))) # It will give a warning that the package does not exist, but we do not want to clutter things up.
 
+  expect_equal(check.models.and.targets(c("RF1_C", "RF1_A", "NULL.MODELS"), c('annual.human.cases', 'seasonal.mosquito.MLE')), NULL)
+  expect_message(check.models.and.targets(c("ArboMAP"), c('annual.human.cases', 'seasonal.mosquito.MLE')), "^seasonal.mosquito.MLE not supported for ArboMAP. Estimates will not be produced for this model")
+
 })
 
 # Should be in rf1 package tests, but done here because then only one copy of the example data is needed.
