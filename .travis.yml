@@ -1,1 +1,15 @@
 language: r
+cache: packages
+
+addons:
+  apt:
+    packages:
+      - libudunits2-dev
+
+r:
+    - oldrel
+    - release
+    - devel
+
+after_success:
+    - Rscript -e 'covr::codecov()'

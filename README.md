@@ -1,5 +1,6 @@
 # dfmip
 [![Build Status](https://travis-ci.org/akeyel/dfmip.svg?branch=master)](https://travis-ci.org/akeyel/dfmip)
+[![Codecov test coverage](https://codecov.io/gh/akeyel/dfmip/branch/master/graph/badge.svg)](https://codecov.io/gh/akeyel/dfmip?branch=master)
 
 Disease Forecast Model Intercomparison Project
 

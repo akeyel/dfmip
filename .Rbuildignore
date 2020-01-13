@@ -6,3 +6,4 @@ README.docx
 ^Meta$
 codemeta.json
 .travis.yml
+^codecov\.yml$
