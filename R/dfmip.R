@@ -120,7 +120,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
   if ("ArboMAP" %in% models.to.run){
 
     # Check that ArboMAP is installed
-    if(!requireNamespace(ArboMAP)){
+    if(!requireNamespace('ArboMAP')){
       stop('ArboMAP package must be installed. You can do this with devtools::install_github("akeyel/ArboMAP/ArboMAP_package", ref = "package_test")')
     }
 
@@ -160,7 +160,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
   # Run the modified ArboMAP model
   if ("ArboMAP.MOD" %in% models.to.run){
     # Check that ArboMAP is installed
-    if(!requireNamespace(ArboMAP)){
+    if(!requireNamespace("ArboMAP")){
       stop('ArboMAP package must be installed. You can do this with devtools::install_github("akeyel/ArboMAP/ArboMAP_package", ref = "package_test")')
     }
 
@@ -202,7 +202,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
   if ("RF1_C" %in% models.to.run){
 
     # Check that rf1 is installed
-    if(!requireNamespace(rf1)){
+    if(!requireNamespace('rf1')){
       stop('rf1 package must be installed. You can do this with devtools::install_github("akeyel/rf1")')
     }
 
@@ -239,7 +239,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     message("Running Random Forest 1 model")
 
     # Check that rf1 is installed
-    if(!requireNamespace(rf1)){
+    if(!requireNamespace('rf1')){
       stop('rf1 package must be installed. You can do this with devtools::install_github("akeyel/rf1")')
     }
 
@@ -385,7 +385,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
   # If seasonal.mosquito.MLE is a forecast target, calculate the observed
   if ("seasonal.mosquito.MLE" %in% forecast.targets){
     # Check that rf1 is installed
-    if(!requireNamespace(rf1)){ stop('rf1 package must be installed. You can do this with devtools::install_github("akeyel/rf1")') }
+    if(!requireNamespace('rf1')){ stop('rf1 package must be installed. You can do this with devtools::install_github("akeyel/rf1")') }
 
     md.data = rf1::calculate.MLE.v2(mosq.data, "annual")
     #**# Should be able to use a similar approach to estimate peak. Should make it easy to adapt the RF model to estimate a peak MLE as well.
@@ -1327,7 +1327,7 @@ run.null.models = function(forecast.targets, forecasts.df, forecast.distribution
   mean.seasonal.mosquito.MLE = NA
   if ("seasonal.mosquito.MLE" %in% forecast.targets){
     # Check that rf1 is installed
-    if(!requireNamespace(rf1)){ stop('rf1 package must be installed. You can do this with devtools::install_github("akeyel/rf1")') }
+    if(!requireNamespace("rf1")){ stop('rf1 package must be installed. You can do this with devtools::install_github("akeyel/rf1")') }
 
     md.data = rf1::calculate.MLE.v2(mosq.data, "annual")
     MLE.vec = c()

@@ -162,7 +162,7 @@ test_that("assorted small functions all work as expected", {
   expect_error(check.models(c("MY.MODEL"), c("NOT.MY.MODEL")))
 
   # Test check for dependencies
-  if (!require(rf1)){
+  if (!requireNamespace('rf1')){
     skip('rf1 package must be installed to test check.dependencies function. You can do this with devtools::install_github("akeyel/rf1")')
   }
   expect_equal(check.dependencies('RF1', c('randomForest', 'psych')), NULL) # Should be no output if everything met. randomForest and psych must be installed on the machine in order to pass this test!
@@ -174,7 +174,7 @@ test_that("assorted small functions all work as expected", {
 test_that("mosquito MLE estimates are calculated correctly",{
 
   # Check that rf1 is installed
-  if(!require(rf1)){
+  if(!requireNamespace('rf1')){
     skip('rf1 package must be installed to test MLE calculations. You can do this with devtools::install_github("akeyel/rf1")')
   }
 
