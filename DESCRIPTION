@@ -37,7 +37,7 @@ LazyData: true
 VignetteBuilder: knitr
 Remotes:
 	akeyel/rf1,
-	akeyel/ArboMAP/ArboMAP_package#b0a9d1f6ad29859c408fa6623ed5ba6c82f1ca78
+	akeyel/ArboMAP
 Imports:
 	caret,
 	dplyr,
