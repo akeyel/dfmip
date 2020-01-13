@@ -1423,11 +1423,11 @@ check.models.and.targets = function(models.to.run, forecast.targets){
   for (model in models.to.run){
     for (target in forecast.targets){
 
-      if (model == "RF1_A" | "RF1_C" | "NULL.MODELS"){
+      if (model == "RF1_A" | model == "RF1_C" | model == "NULL.MODELS"){
         supported.targets = c(ahc, smMLE)
       }
 
-      if (model == "ArboMAP" | "ArboMAP_mod"){
+      if (model == "ArboMAP" | model == "ArboMAP.MOD"){
         supported.targets = c(ahc)
       }
 
