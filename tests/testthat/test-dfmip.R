@@ -171,6 +171,29 @@ test_that("assorted small functions all work as expected", {
   expect_equal(check.models.and.targets(c("RF1_C", "RF1_A", "NULL.MODELS"), c('annual.human.cases', 'seasonal.mosquito.MLE')), NULL)
   expect_message(check.models.and.targets(c("ArboMAP"), c('annual.human.cases', 'seasonal.mosquito.MLE')), "^seasonal.mosquito.MLE not supported for ArboMAP. Estimates will not be produced for this model")
 
+  # Check inputs/targets function
+  rf1.inputs = list(NA, NA, NA, NA, NA, NA, NA, 0, 0)
+  forecast.targets = c('annual.human.cases', 'seasonal.mosquito.MLE')
+  rf1.inputs = check.inputs.targets(rf1.inputs, forecast.targets, warnings = FALSE)
+  expect_equal(rf1.inputs[[8]], 1)
+  expect_equal(rf1.inputs[[9]], 1)
+
+  rf1.inputs = list(NA, NA, NA, NA, NA, NA, NA, 1, 1)
+  forecast.targets = c('annual.human.cases', 'seasonal.mosquito.MLE')
+  rf1.inputs = check.inputs.targets(rf1.inputs, forecast.targets, warnings = FALSE)
+  expect_equal(rf1.inputs[[8]], 1)
+  expect_equal(rf1.inputs[[9]], 1)
+
+  rf1.inputs = list(NA, NA, NA, NA, NA, NA, NA, 1, 1)
+  forecast.targets = c("Not a real entry")
+  rf1.inputs = check.inputs.targets(rf1.inputs, forecast.targets, warnings = FALSE)
+  expect_equal(rf1.inputs[[8]], 0)
+  expect_equal(rf1.inputs[[9]], 0)
+
+  # Test warning message
+  expect_warning(check.inputs.targets(list(NA,NA,NA,NA,NA,NA,NA,0,0), c('annual.human.cases')), "Human analysis was not set to run, but annual.human.cases was included in forecasting targets. The human analysis WILL be run.")
+
+
 })
 
 # Should be in rf1 package tests, but done here because then only one copy of the example data is needed.

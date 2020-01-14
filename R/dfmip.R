@@ -247,12 +247,13 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
       stop('rf1 package must be installed. You can do this with devtools::install_github("akeyel/rf1")')
     }
 
+    # Check that rf1.inputs match with forecast.targets
+    rf1.inputs = check.inputs.targets(rf1.inputs, forecast.targets)
+
     # Set up the sub-model output results
     rf1.results.path = sprintf("%s/rf1_results", results.path)
     if (!file.exists(rf1.results.path)){ dir.create((rf1.results.path))  }
 
-    #**# FIX OUTPUT FROM HERE TO ACCOUNT FOR DISTRIBUTIONS
-    #**# LEFT OFF HERE
     RF1.out = rf1::rf1(human.data, mosq.data, districtshapefile, weather.data,
                       weekinquestion, rf1.inputs, rf1.results.path)
 
@@ -523,11 +524,11 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
   # Loop through forecast targets
   for (i in seq_len(length(forecast.targets))){
     forecast.target = forecast.targets[i]
-    #message("Checking distributions that have been output")
-    #message(str(forecast.distributions))
+    message("Checking distributions that have been output")
+    message(str(forecast.distributions))
 
     target.distributions = forecast.distributions[[forecast.target]]
-    #message(names(target.distributions))
+    message(names(target.distributions))
 
     keys = names(target.distributions)
     #models = sapply(keys, splitter, ':', 1, as.string = 1)
@@ -552,7 +553,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
       for (k in seq_len(length(model.index))){
         this.index.value = model.index[k]
         this.key = keys[this.index.value]
-        #message(this.key)
+        message(this.key)
         this.distribution = target.distributions[[this.key]]
 
         this.key = as.character(this.key) # Ensure the key is in character format
@@ -561,13 +562,13 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
         this.year = splitter(this.date, '-', 1)
         this.year.key = sprintf("x%s", this.year)
 
-        #message(model)
-        #message(this.index.value)
-        #message(this.key)
-        #message(this.date)
-        #message(forecast.target)
-        #message(this.year.key)
-        #message(str(observation.list))
+        message(model)
+        message(this.index.value)
+        message(this.key)
+        message(this.date)
+        message(forecast.target)
+        message(this.year.key)
+        message(str(observation.list))
         #message(paste(model.index, collapse = ',')) #**# IS model.index NA for soemthing?
         this.observation = observation.list[[forecast.target]][[this.year.key]]
 
@@ -1410,6 +1411,7 @@ run.null.models = function(forecast.targets, forecasts.df, forecast.distribution
 #' @param forecast.targets What the model is forecasting. See \code{\link{dfmip.forecast}} for more details.
 #'
 #' @return NULL
+#' @noRd
 #'
 check.models.and.targets = function(models.to.run, forecast.targets){
 
@@ -1443,3 +1445,60 @@ check.models.and.targets = function(models.to.run, forecast.targets){
 }
 
 
+
+#' Check that rf1.inputs match with forecast.targets
+#'
+#' Will give a warning and adjust rf1.inputs if there is a mismatch
+#' #**# Consider if the human or mosquito analyses apply to other forecast targets
+#'
+#' @param rf1.inputs See \code{\link{rf1.inputs}}
+#' @param forecast.targets See \code{\link{dfmip.forecast}}
+#' @param An indicator for whether warnings should be issued (used to turn off warnings in testing)
+#'
+#' @return rf1.inputs A possibly modified rf1.inputs object based on any mismatches detected during the checks
+#' @noRd
+#'
+check.inputs.targets = function(rf1.inputs, forecast.targets, warnings = TRUE){
+
+  # Check that the analyze.mosquitoes setting is consistent with forecast.targets. If not, override it with a warning
+  analyze.mosquitoes = rf1.inputs[[8]]
+  if (analyze.mosquitoes == 1){
+    if (!'seasonal.mosquito.MLE' %in% forecast.targets){
+      if (warnings == TRUE){
+        warning("Mosquito analysis set to run, but seasonal mosquito MLE was not a forecasting target. The mosquito analysis will not be run.")
+      }
+      rf1.inputs[[8]] = 0
+    }
+  }
+
+  if (analyze.mosquitoes == 0){
+    if ('seasonal.mosquito.MLE' %in% forecast.targets){
+      if (warnings == TRUE){
+        warning("Mosquito analysis was set NOT to run, but mosquito output was desired. The mosquito analysis WILL be run.")
+      }
+      rf1.inputs[[8]] = 1
+    }
+  }
+
+  # Check that analzye.humans setting is consistent with forecast.targets
+  analyze.humans = rf1.inputs[[9]]
+  if (analyze.humans == 1){
+    if (!"annual.human.cases" %in% forecast.targets){
+      if (warnings == TRUE){
+        warning("Human analysis set to run, but annual.human.cases not in forecasting targets. The human analysis will NOT be run.")
+      }
+      rf1.inputs[[9]] = 0
+    }
+  }
+
+  if (analyze.humans == 0){
+    if ("annual.human.cases" %in% forecast.targets){
+      if (warnings == TRUE){
+        warning("Human analysis was not set to run, but annual.human.cases was included in forecasting targets. The human analysis WILL be run.")
+      }
+      rf1.inputs[[9]] = 1
+    }
+  }
+
+  return(rf1.inputs)
+}
