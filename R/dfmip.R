@@ -123,9 +123,9 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
   if ("ArboMAP" %in% models.to.run){
 
     # Check that ArboMAP is installed
-    if(!requireNamespace('ArboMAP')){
-      stop('ArboMAP package must be installed. You can do this with devtools::install_github("akeyel/ArboMAP/ArboMAP_package", ref = "package_test")')
-    }
+    #if(!requireNamespace('ArboMAP')){
+    #  stop('ArboMAP package must be installed. You can do this with devtools::install_github("akeyel/ArboMAP/ArboMAP_package", ref = "package_test")')
+    #}
 
     # Check that the arbo.inputs object is defined
     if (arbo.inputs[[1]] == 'none'){ stop("arbo.inputs object is required to run the ArboMAP model. Please make sure it exists and is properly input.")    }
@@ -144,9 +144,9 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     #stop("GOT HERE")
 
     # [[1]] is necessary to get just the results. [[2]] returns the inputs, and is for compatibility with the .Rmd format in which ArboMAP was initially developed
-    ArboMAP.results = ArboMAP::ArboMAP(human.data, mosq.data, districtshapefile, stratafile, weather.data,
-                              weathersummaryfile, maxobservedhumandate, weekinquestion,
-                              var1name, var2name, compyear1, compyear2, results.path, original.metrics = 1)[[1]]
+    #ArboMAP.results = ArboMAP::ArboMAP(human.data, mosq.data, districtshapefile, stratafile, weather.data,
+    #                          weathersummaryfile, maxobservedhumandate, weekinquestion,
+    #                          var1name, var2name, compyear1, compyear2, results.path, original.metrics = 1)[[1]]
     ArboMAP.results$model.name = "ArboMAP"
     ArboMAP.results$forecast.id = week.id
     ArboMAP.results$seasonal.mosquito.MLE = NA
@@ -164,9 +164,9 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
   # Run the modified ArboMAP model
   if ("ArboMAP.MOD" %in% models.to.run){
     # Check that ArboMAP is installed
-    if(!requireNamespace("ArboMAP")){
-      stop('ArboMAP package must be installed. You can do this with devtools::install_github("akeyel/ArboMAP/ArboMAP_package", ref = "package_test")')
-    }
+    #if(!requireNamespace("ArboMAP")){
+    #  stop('ArboMAP package must be installed. You can do this with devtools::install_github("akeyel/ArboMAP/ArboMAP_package", ref = "package_test")')
+    #}
 
 
     # Check that the arbo.inputs object is defined
@@ -184,9 +184,9 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     weathersummaryfile = NA
 
     # [[1]] is necessary to get just the results. [[2]] returns the inputs, and is for compatibility with the .Rmd format in which ArboMAP was initially developed
-    ArboMAP.results = ArboMAP::ArboMAP(human.data, mosq.data, districtshapefile, stratafile, weather.data,
-                              weathersummaryfile, maxobservedhumandate, weekinquestion,
-                              var1name, var2name, compyear1, compyear2, results.path, original.metrics = 0)[[1]]
+    #ArboMAP.results = ArboMAP::ArboMAP(human.data, mosq.data, districtshapefile, stratafile, weather.data,
+    #                          weathersummaryfile, maxobservedhumandate, weekinquestion,
+    #                          var1name, var2name, compyear1, compyear2, results.path, original.metrics = 0)[[1]]
     ArboMAP.results$model.name = "ArboMAP.MOD"
     ArboMAP.results$forecast.id = week.id
     ArboMAP.results$seasonal.mosquito.MLE = NA

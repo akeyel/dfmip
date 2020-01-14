@@ -37,7 +37,6 @@ LazyData: true
 VignetteBuilder: knitr
 Remotes:
 	akeyel/rf1,
-	akeyel/ArboMAP
 Imports:
 	caret,
 	dplyr,
@@ -46,7 +45,6 @@ Imports:
 	scoringRules
 Suggests:
     rf1,
-    ArboMAP,
     knitr,
     rmarkdown,
     testthat (>= 2.1.0),

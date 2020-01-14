@@ -441,9 +441,10 @@ test_that("NULL model produces the expected outputs for mosquitoes", {
 
 
 test_that("RF1 model produces the expected outputs", {
+
   if (Test_All == 0){
-    skip_on_os('windows')
-    #skip("Skipped RF1 model tests to save time") #**# Enable when testing code other than the main functions
+    #skip_on_os('windows')
+    skip("Skipped RF1 model tests to save time") #**# Enable when testing code other than the main functions
   }
 
   # Load example data to run the models (back out two directories to get into main package directory)
