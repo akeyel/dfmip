@@ -531,7 +531,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
 
     keys = names(target.distributions)
     #models = sapply(keys, splitter, ':', 1, as.string = 1)
-    models = vapply(keys, splitter, FUN.VALUE = numeric(1), ':', 1, as.string = 1)
+    models = vapply(keys, splitter, FUN.VALUE = character(1), ':', 1, as.string = 1)
 
     # Calculate accuracy over all forecasts for each model
     for (j in seq_len(length(models.to.run))){
