@@ -212,6 +212,9 @@ test_that('the example data can be loaded properly', {
 
 #**# SKIP THIS ON CRAN - THIS WILL TAKE A WHILE TO RUN
 test_that("ArboMAP model produces the expected outputs", {
+
+  skip("ArboMAP requires updating to 2.0")
+
   if (Test_All == 0 | Test_All == 2){
     skip_on_os('windows') #"Skipped testing ArboMAP model to save time") #**# Enable when testing code other than the main functions
   }
@@ -280,10 +283,10 @@ test_that("ArboMAP model produces the expected outputs", {
 
 # Test NULL model
 test_that("NULL model produces the expected outputs", {
-  if (Test_All == 0 | Test_All == 2){
-    #skip_on_os('windows')
-    skip("Skipped NULL model tests to save time") #**# Enable when testing code other than the main functions
-  }
+  #if (Test_All == 0 | Test_All == 2){
+  #  skip_on_os('windows')
+  #  #skip("Skipped NULL model tests to save time") #**# Enable when testing code other than the main functions
+  #}
 
   # Load example data to run the models (back out two directories to get into main package directory)
   load("dfmip_example_inputs.RData")
@@ -348,10 +351,10 @@ test_that("NULL model produces the expected outputs", {
 
 # Test NULL model
 test_that("NULL model produces the expected outputs for mosquitoes", {
-  if (Test_All == 0 | Test_All == 2){
-    #skip_on_os('windows')
-    skip("Skipped NULL model mosquito tests to save time") #**# Enable when testing code other than the main functions
-  }
+  #if (Test_All == 0 | Test_All == 2){
+  #  #skip_on_os('windows')
+  #  skip("Skipped NULL model mosquito tests to save time") #**# Enable when testing code other than the main functions
+  #}
 
   # Load example data to run the models (back out two directories to get into main package directory)
   load("dfmip_example_inputs.RData")
@@ -416,8 +419,8 @@ test_that("NULL model produces the expected outputs for mosquitoes", {
 
 test_that("RF1 model produces the expected outputs", {
   if (Test_All == 0){
-    #skip_on_os('windows')
-    skip("Skipped RF1 model tests to save time") #**# Enable when testing code other than the main functions
+    skip_on_os('windows')
+    #skip("Skipped RF1 model tests to save time") #**# Enable when testing code other than the main functions
   }
 
   # Load example data to run the models (back out two directories to get into main package directory)
