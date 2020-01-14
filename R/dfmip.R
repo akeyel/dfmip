@@ -524,11 +524,11 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
   # Loop through forecast targets
   for (i in seq_len(length(forecast.targets))){
     forecast.target = forecast.targets[i]
-    message("Checking distributions that have been output")
-    message(str(forecast.distributions))
+    #message("Checking distributions that have been output")
+    #message(str(forecast.distributions))
 
     target.distributions = forecast.distributions[[forecast.target]]
-    message(names(target.distributions))
+    #message(names(target.distributions))
 
     keys = names(target.distributions)
     #models = sapply(keys, splitter, ':', 1, as.string = 1)
@@ -553,7 +553,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
       for (k in seq_len(length(model.index))){
         this.index.value = model.index[k]
         this.key = keys[this.index.value]
-        message(this.key)
+        #message(this.key)
         this.distribution = target.distributions[[this.key]]
 
         this.key = as.character(this.key) # Ensure the key is in character format
@@ -562,13 +562,13 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
         this.year = splitter(this.date, '-', 1)
         this.year.key = sprintf("x%s", this.year)
 
-        message(model)
-        message(this.index.value)
-        message(this.key)
-        message(this.date)
-        message(forecast.target)
-        message(this.year.key)
-        message(str(observation.list))
+        #message(model)
+        #message(this.index.value)
+        #message(this.key)
+        #message(this.date)
+        #message(forecast.target)
+        #message(this.year.key)
+        #message(str(observation.list))
         #message(paste(model.index, collapse = ',')) #**# IS model.index NA for soemthing?
         this.observation = observation.list[[forecast.target]][[this.year.key]]
 
