@@ -72,10 +72,10 @@ NULL
 #' @param weekinquestion The focal week for the forecast. For the Random Forest model, this will be the last day used for making the forecast
 #' @param week.id A two-part ID for the analysis run to distinguish it from other weeks or runs. The first part is a character string, while the second part is a date in the format YYYY-MM-DD #**# analysis.id would be a better name, but would require changes to the code in multiple places
 #' @param results.path The base path in which to place the modeling results. Some models will create sub-folders for model specific results
-#' @param arbo.inputs Inputs specific to the ArboMAP model. If the ArboMAP model or ArboMAP.MOD model are not being run, this should be set to 'none' or omitted from the function call
-#' @param observed.inputs Observed values to be used for comparison purposes. Not relevant for forecasts, but of interest for evaluating hindcasts. If unused, set the variable to NA or omit from the function call
+#' @param model.inputs A keyed list of model-specific inputs. Keyed entry options are: \tabular{ll}{
+#' arbo.inputs \tab Inputs specific to the ArboMAP model. #**# DOCUMENTATION NEEDED\cr
+#' rf1.inputs \tab Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}.\cr}
 #' @param population.df Census information for calculating incidence. Can be set to 'none' or omitted from the function call #**# NEEDS FORMAT INSTRUCTIONS
-#' @param rf1.inputs Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}. If this model is not included, this should be set to 'none' or omitted from the function call #**# LINK TO AN OBJECT WITH MORE DETAILS
 #'
 #' @return dfmip.outputs: List of two objects: forecasts.df (see above) and other.results
 #' other.results contains model-specific results that do not fit in the forecasts.df format
@@ -86,8 +86,8 @@ NULL
 #' @export dfmip.forecast
 dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data,
                      weather.data, districtshapefile, weekinquestion, week.id,
-                     results.path, arbo.inputs = 'none', observed.inputs = 'none',
-                     population.df = 'none', rf1.inputs = 'none'){
+                     results.path, model.inputs = list(),
+                     population.df = 'none'){
 
   # Check that models to run are all valid model names
   models.in.dfmip = c("NULL.MODELS", "ArboMAP", "ArboMAP.MOD", "RF1_C", "RF1_A")
@@ -95,6 +95,9 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
   # Check which models support the selected forecast targets
   check.models.and.targets(models.to.run, forecast.targets)
+
+  # Check that the appropriate input objects have been provided for the desired models
+  check.model.inputs(models.to.run, model.inputs)
 
   # Initialize the forecast object
   forecasts.df = NA
@@ -133,6 +136,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     message("Running ArboMAP model")
 
     # Unpack the arbo.inputs object
+    arbo.inputs = model.inputs[['arbo.inputs']]
     stratafile = arbo.inputs$stratafile
     maxobservedhumandate = arbo.inputs$maxobservedhumandate
     var1name = arbo.inputs$var1name
@@ -175,6 +179,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     message("Running ArboMAP.MOD model")
 
     # Unpack the arbo.inputs object
+    arbo.inputs = model.inputs[['arbo.inputs']]
     stratafile = arbo.inputs$stratafile
     maxobservedhumandate = arbo.inputs$maxobservedhumandate
     var1name = arbo.inputs$var1name
@@ -218,7 +223,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     if (!file.exists(rf1.results.path)){ dir.create((rf1.results.path))  }
 
     # Create a new rf1.inputs object and clear any added inputs
-    rf1.inputs.no.extras = rf1.inputs
+    rf1.inputs.no.extras = model.inputs[['rf1.inputs']]
     rf1.inputs.no.extras[[1]] = NA
     rf1.inputs.no.extras[[2]] = NA
 
@@ -248,6 +253,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     }
 
     # Check that rf1.inputs match with forecast.targets
+    rf1.inputs = model.inputs[["rf1.inputs"]]
     rf1.inputs = check.inputs.targets(rf1.inputs, forecast.targets)
 
     # Set up the sub-model output results
@@ -367,9 +373,10 @@ NULL
 #' The read.weather.data function from ArboMAP is a useful way to process one or more data files downloaded via Google Earth Engine.
 #' @param districtshapefile The shapefile with polygons representing the districts. #**# Are there required fields?
 #' @param results.path The base path in which to place the modeling results. Some models will create sub-folders for model specific results
-#' @param arbo.inputs Inputs specific to the ArboMAP model. If the ArboMAP model or ArboMAP.MOD model are not being run, this should be set to 'none' or omitted from the function call
+#' @param model.inputs A keyed list of model-specific inputs. Keyed entry options are: \tabular{ll}{
+#' arbo.inputs \tab Inputs specific to the ArboMAP model. #**# DOCUMENTATION NEEDED\cr
+#' rf1.inputs \tab Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}.\cr}
 #' @param population.df Census information for calculating incidence. Can be set to 'none' or omitted from the function call #**# NEEDS FORMAT INSTRUCTIONS
-#' @param rf1.inputs Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}. If this model is not included, this should be set to 'none' or omitted from the function call #**# LINK TO AN OBJECT WITH MORE DETAILS
 #' @param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.
 #' @param percentage For continuous and discrete forecasts, if the prediction is within the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.
 #' @param id.string An ID to include in the forecast ID for this hindcast run (e.g., state)
@@ -379,9 +386,9 @@ NULL
 #'
 #' @export dfmip.hindcasts
 dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.data, mosq.data,
-                           weather.data, districtshapefile, results.path, arbo.inputs = 'none',
-                           population.df = 'none', rf1.inputs = 'none', threshold = 'default',
-                           percentage = 'default', id.string = "", season_start_month = 7, weeks_in_season = 2, sample_frequency = 1){
+                           weather.data, districtshapefile, results.path, model.inputs = list(),
+                           population.df = 'none', threshold = 'default', percentage = 'default',
+                           id.string = "", season_start_month = 7, weeks_in_season = 2, sample_frequency = 1){
 
   # Indicator to denote the first time through the loop
   first = 1
@@ -449,12 +456,6 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
       # Update the observed inputs and predict this weeks' cases
       this.weeks.cases = NA #**# NOT SCRIPTED as this is not one of the key comparison outputs
 
-      # #**# THIS NEEDS TO BE REFRAMED IN THE CONTEXT OF FORECAST TARGETS
-      # observed.inputs = list(observed.positive.districts = year.positive.districts,
-      #                       observed.human.cases = year.human.cases,
-      #                       observed.weeks.cases = this.weeks.cases)
-      observed.inputs = NA
-
       # Subset the human data object
       human.data.subset = human.data[human.data$year < year, ]
       #**# Current year needs to be dropped for ArboMAP, but this may not be appropriate for other approaches. Need to re-address when this is an issue.
@@ -491,7 +492,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
 
         out = dfmip.forecast(forecast.targets, actual.models.to.run, human.data.subset, mosq.data.subset, weather.data.subset,
                              districtshapefile, weekinquestion, week.id, results.path,
-                             arbo.inputs, observed.inputs, population.df, rf1.inputs)
+                             model.inputs, population.df)
         out.forecasts = out[[1]]
         out.distributions = out[[2]]
 
@@ -1238,7 +1239,7 @@ get_sampling_weeks = function(year, season_start_month, weeks_in_season, sample_
 #' test.type
 #'
 #' Simple testing function to identify a bug with rbind in the code. Bug appears to be external to dfmip.R and output_accuracy.R
-#'
+#' #**# Consider moving to junk?
 #' @param vector An input vector to check
 #' @param test.name A name for the test location in the code
 #'
@@ -1253,7 +1254,6 @@ test.type = function(vector, test.name){
     }
   }
 }
-#**# Consider moving to junk?
 
 #' Check models
 #'
@@ -1282,6 +1282,39 @@ check.models = function(models.to.run, models.in.dfmip){
   }
 
 }
+
+#' Check Model Inputs
+#'
+#' Check that the appropriate input objects have been provided for the desired models
+#'
+#' @param models.to.run a vector of the models to be run
+#' @param model.inputs a list of model inputs, keyed by the name of the inputs
+#' (cannot key to model name, as multiple model variants may use the same inputs)
+#'
+#' @noRd
+#'
+check.model.inputs = function(models.to.run, model.inputs){
+
+  err.message = ""
+  is.error = 0
+  # Check for arbo.inputs
+  if ("ArboMAP.MOD" %in% models.to.run | "ArboMAP" %in% models.to.run){
+    if (length(model.inputs$arbo.inputs) == 0){
+      err.message = sprintf("%s\narbo.inputs object is missing from the model.inputs list.", err.message)
+      is.error = 1
+    }
+  }
+
+  # Check for RF1 inputs
+  if ("RF1_C" %in% models.to.run | "RF1_A" %in% models.to.run){
+    if (length(model.inputs$rf1.inputs) == 0){
+      err.message = sprintf("%s\nrf1.inputs object is missing from the model.inputs list.", err.message)
+      is.error = 1
+    }
+  }
+  if (is.error == 1){stop(err.message)}
+}
+
 
 
 #' Generate null models based on mean values

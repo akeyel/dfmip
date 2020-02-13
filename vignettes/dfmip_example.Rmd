@@ -78,6 +78,7 @@ knitr::kable(dfmip::mosq.data[1:5, ])
 # analyze.humans = 1
 # rf1.inputs = list(files.to.add, merge.type.vec, analysis.counties, analysis.years, user.drop.vars, mosq.model, human.model,
 #                   analyze.mosquitoes, analyze.humans)
+# model.inputs = list(arbo.inputs = arbo.inputs, rf1.inputs = rf1.inputs)
 
 # Code used to save the inputs once they are assembled 
 # example.inputs = "dfmip_example_inputs.RData"
@@ -103,8 +104,7 @@ models.to.run = c("NULL.MODELS")
 # NOT RUN TO SAVE PROCESSING TIME & AVOID ERRORS if the ArboMAP or RF1 packages are not installed
 #dfmip.outputs = dfmip.forecast(forecast.targets, models.to.run, human.data, mosq.data, weather.data,
 #                          districtshapefile, weekinquestion, week.id, results.path,
-#                          arbo.inputs = arbo.inputs, observed.inputs = observed.inputs,
-#                          population.df = population.df, rf1.inputs = rf1.inputs)
+#                          model.inputs = model.inputs, population.df = population.df)
 #load('dfmip_outputs.RData')
 
 
