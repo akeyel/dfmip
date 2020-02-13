@@ -603,89 +603,129 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
   return(list(accuracy.summary, forecasts.df, forecast.distributions))
 }
 
-
-#' Update data frame
+#' Update data frame (version 2)
 #'
 #' @description forecasts.df should be initialized as NA if it does not already exist and contain data.
 #' Otherwise, it is updated with the results. This function provides a standardized format for inputting
 #' data from different models in to a common data frame
 #'
-#' @param forecast.targets The targets to include in the output data frame. See \code{\link{dfmip.forecast}} for options.
 #' @param forecasts.df The data frame object to contain the results from dfmip
-#' @param results.object The results object to be integrated into forecasts.df
+#' @param results.object The results object to be integrated into forecasts.df. Must be a data frame with the following columns:
+#' model.name, forecast.id, forecast.target, UNIT, date, year, value. For more information on these columns, see #**# ADD LINK.
 #'
 #' @noRd
 #'
-update.df = function(forecast.targets, forecasts.df, results.object){
-
-  # Unpack the results object
-  model.name = results.object$model.name
-  forecast.id = results.object$forecast.id
-
-  # Plot observed vs. forecast human cases by state, year, and date of forecast
-  UNIT = splitter(as.character(forecast.id), ":", 1, 1)
-  date = splitter(as.character(forecast.id), ":", 2, 1)
-  year = splitter(date, "-", 1, 0)
-
-  # Update human cases, if applicable
-  if ("annual.human.cases" %in% forecast.targets){
-    annual.human.cases = results.object$annual.human.cases
-
-  }
-
-  # Update seasonal mosquito MLE, if applicable
-  if ("seasonal.mosquito.MLE" %in% forecast.targets){
-    seasonal.mosquito.MLE = results.object$seasonal.mosquito.MLE
-  }
-
-  # Other former targets
-  #annual.positive.district.weeks = results.object$annual.positive.district.weeks
-  #multiplier = results.object$multiplier
-  #weeks.cases = results.object$weeks.cases
-
+update.df2 = function(forecasts.df, results.df){
 
   # Create the results object if it does not already exist
-  if (length(forecasts.df) < 2){
+  if (length(forecasts.df) != 7){
     # Confirm that this was triggered by an NA
     # The length step is needed to avoid a warning about length > 1 when the forecasts.df object exists.
-    # Minimum length should be 5 for 5 fields, so <2 should never happen with a filled forecasts.df object
+    # Length should be 7 for a filled data frame
     if (!is.na(forecasts.df)){ stop("Something went very wrong with the update.df function") }
 
-    forecasts.df = data.frame(MODEL.NAME = model.name, FORECAST.ID = as.character(forecast.id), UNIT = as.character(UNIT), DATE = as.character(date), YEAR = year)
-
-    if ("annual.human.cases" %in% forecast.targets){  forecasts.df$annual.human.cases = annual.human.cases }
-    if ("seasonal.mosquito.MLE" %in% forecast.targets){ forecasts.df$seasonal.mosquito.MLE = seasonal.mosquito.MLE  }
-    #ANNUAL.POSITIVE.DISTRICT.WEEKS = annual.positive.district.weeks,
-    #FORECAST.WEEK.CASES = weeks.cases
+    forecasts.df = results.df
 
     # Ensure that fields come in as character, so that factor levels are not locked and fields are fully updateable
-    forecasts.df$MODEL.NAME = as.character(forecasts.df$MODEL.NAME)
-    forecasts.df$FORECAST.ID = as.character(forecasts.df$FORECAST.ID)
+    forecasts.df$model.name = as.character(forecasts.df$model.name)
+    forecasts.df$forecast.id = as.character(forecasts.df$forecast.id)
     forecasts.df$UNIT = as.character(forecasts.df$UNIT)
-    forecasts.df$DATE = as.character(forecasts.df$DATE)
+    forecasts.df$date = as.character(forecasts.df$date)
 
     # Otherwise, update it using rbind
   }else{
-    #**# Watch that there are not issues with this order-based approach. Could have troubles if orders are changed.
-    targets = c()
-    if ("annual.human.cases" %in% forecast.targets){  targets = c(targets, annual.human.cases) }
-    if ("seasonal.mosquito.MLE" %in% forecast.targets){ targets = c(targets, seasonal.mosquito.MLE)  }
-    #annual.positive.district.weeks
-    #weeks.cases
+    forecasts.df = rbind(forecasts.df, results.df)
 
-    new.row = c(model.name, forecast.id, UNIT, date, year, targets)
-    #test.type(new.row, 'L682')
-    forecasts.df = rbind(forecasts.df, new.row)
-
-    # Ensure numeric fields are numeric
-    if ("annual.human.cases" %in% forecast.targets){ forecasts.df$annual.human.cases = as.numeric(forecasts.df$annual.human.cases) }
-    if ('seasonal.mosquito.MLE' %in% forecast.targets){ forecasts.df$seasonal.mosquito.MLE = as.numeric(forecasts.df$seasonal.mosquito.MLE) }
-    forecasts.df$YEAR = as.numeric(forecasts.df$YEAR)
+    #**# Watch for problems caused by non-numeric fields. annual.human.cases and seasonal.mosquito.MLE and year should be numeric, but forecast week will need to be a date.
   }
 
   return(forecasts.df)
 }
 
+
+
+#' #' Update data frame
+#' #'
+#' #' @description forecasts.df should be initialized as NA if it does not already exist and contain data.
+#' #' Otherwise, it is updated with the results. This function provides a standardized format for inputting
+#' #' data from different models in to a common data frame
+#' #'
+#' #' @param forecast.targets The targets to include in the output data frame. See \code{\link{dfmip.forecast}} for options.
+#' #' @param forecasts.df The data frame object to contain the results from dfmip
+#' #' @param results.object The results object to be integrated into forecasts.df
+#' #'
+#' #' @noRd
+#' #'
+#' update.df = function(forecast.targets, forecasts.df, results.object){
+#'
+#'   # Unpack the results object
+#'   model.name = results.object$model.name
+#'   forecast.id = results.object$forecast.id
+#'
+#'   # Plot observed vs. forecast human cases by state, year, and date of forecast
+#'   UNIT = splitter(as.character(forecast.id), ":", 1, 1)
+#'   date = splitter(as.character(forecast.id), ":", 2, 1)
+#'   year = splitter(date, "-", 1, 0)
+#'
+#'   # Update human cases, if applicable
+#'   if ("annual.human.cases" %in% forecast.targets){
+#'     annual.human.cases = results.object$annual.human.cases
+#'
+#'   }
+#'
+#'   # Update seasonal mosquito MLE, if applicable
+#'   if ("seasonal.mosquito.MLE" %in% forecast.targets){
+#'     seasonal.mosquito.MLE = results.object$seasonal.mosquito.MLE
+#'   }
+#'
+#'   # Other former targets
+#'   #annual.positive.district.weeks = results.object$annual.positive.district.weeks
+#'   #multiplier = results.object$multiplier
+#'   #weeks.cases = results.object$weeks.cases
+#'
+#'
+#'   # Create the results object if it does not already exist
+#'   if (length(forecasts.df) < 2){
+#'     # Confirm that this was triggered by an NA
+#'     # The length step is needed to avoid a warning about length > 1 when the forecasts.df object exists.
+#'     # Minimum length should be 5 for 5 fields, so <2 should never happen with a filled forecasts.df object
+#'     if (!is.na(forecasts.df)){ stop("Something went very wrong with the update.df function") }
+#'
+#'     forecasts.df = data.frame(MODEL.NAME = model.name, FORECAST.ID = as.character(forecast.id), UNIT = as.character(UNIT), DATE = as.character(date), YEAR = year)
+#'
+#'     if ("annual.human.cases" %in% forecast.targets){  forecasts.df$annual.human.cases = annual.human.cases }
+#'     if ("seasonal.mosquito.MLE" %in% forecast.targets){ forecasts.df$seasonal.mosquito.MLE = seasonal.mosquito.MLE  }
+#'     #ANNUAL.POSITIVE.DISTRICT.WEEKS = annual.positive.district.weeks,
+#'     #FORECAST.WEEK.CASES = weeks.cases
+#'
+#'     # Ensure that fields come in as character, so that factor levels are not locked and fields are fully updateable
+#'     forecasts.df$MODEL.NAME = as.character(forecasts.df$MODEL.NAME)
+#'     forecasts.df$FORECAST.ID = as.character(forecasts.df$FORECAST.ID)
+#'     forecasts.df$UNIT = as.character(forecasts.df$UNIT)
+#'     forecasts.df$DATE = as.character(forecasts.df$DATE)
+#'
+#'     # Otherwise, update it using rbind
+#'   }else{
+#'     #**# Watch that there are not issues with this order-based approach. Could have troubles if orders are changed.
+#'     targets = c()
+#'     if ("annual.human.cases" %in% forecast.targets){  targets = c(targets, annual.human.cases) }
+#'     if ("seasonal.mosquito.MLE" %in% forecast.targets){ targets = c(targets, seasonal.mosquito.MLE)  }
+#'     #annual.positive.district.weeks
+#'     #weeks.cases
+#'
+#'     new.row = c(model.name, forecast.id, UNIT, date, year, targets)
+#'     #test.type(new.row, 'L682')
+#'     forecasts.df = rbind(forecasts.df, new.row)
+#'
+#'     # Ensure numeric fields are numeric
+#'     if ("annual.human.cases" %in% forecast.targets){ forecasts.df$annual.human.cases = as.numeric(forecasts.df$annual.human.cases) }
+#'     if ('seasonal.mosquito.MLE' %in% forecast.targets){ forecasts.df$seasonal.mosquito.MLE = as.numeric(forecasts.df$seasonal.mosquito.MLE) }
+#'     forecasts.df$YEAR = as.numeric(forecasts.df$YEAR)
+#'   }
+#'
+#'   return(forecasts.df)
+#' }
+#'
 
 #' Update list of forecast distributions
 #'
@@ -850,6 +890,83 @@ date.subset = function(df, end.year, end.month, end.day, date.format){
   #df.3$datestr[(nrow(df.3)-10):nrow(df.3)] #Check sorting; data is sorted by year, and looking at the end shows the dropping of the non-matching dates
 
   return(df.3)
+}
+
+
+#' Statewide Cases Null Model
+#'
+#' Predict the number of human cases based on historical number of human cases for the entire unit
+#'
+#' @noRd
+#'
+statewide.cases.null.model = function(human.data, n.years, model.name, week.id){
+
+  # unpack week.id
+  UNIT = splitter(as.character(week.id), ":", 1, 1)
+  date = splitter(as.character(week.id), ":", 2, 1)
+  year = splitter(date, "-", 1, 0)
+
+  # Create a forecast.id
+  forecast.id = sprintf("%s:%s-STATEWIDE", week.id, UNIT)
+
+  # Calculate total number of human cases
+  tot.cases = nrow(human.data)
+
+  # Calculate total number of years
+  n.years = length(unique(human.data$year))
+
+  # Estimate mean cases per year
+  mean.annual.cases = tot.cases / n.years
+
+  # Put it into a data frame for joining with other results
+  statewide.cases = data.frame(model.name = model.name, forecast.id = forecast.id,
+                              forecast.target = "annual.human.cases",
+                              UNIT = UNIT, date = date, year = year,
+                              value = mean.annual.cases)
+
+
+  return(statewide.cases)
+}
+
+#' District Cases Null Model
+#'
+#' Predict the number of human cases of WNV based on historical number of human cases by district
+#'
+#'@param human.data Standardized human data input
+#'@param n.years Number of years in human.data
+#'
+#' @noRd
+#'
+district.cases.null.model = function(human.data, n.years, model.name, week.id){
+
+  # unpack week.id
+  UNIT = splitter(as.character(week.id), ":", 1, 1)
+  date = splitter(as.character(week.id), ":", 2, 1)
+  year = splitter(date, "-", 1, 0)
+
+
+  # Data frame will be populated with values by looping through districts
+  district.cases = data.frame(model.name = model.name, forecast.id = NA,
+                              forecast.target = "annual.human.cases",
+                              UNIT = UNIT, date = date, year = year, value = NA)
+
+  # Loop over districts
+  districts = unique(human.data$district)
+  for (i in seq_len(length(districts))){
+
+    district = districts[i]
+    forecast.id = sprintf("%s:%s", week.id, district)
+
+    human.data.subset = human.data[as.character(human.data$district) == district, ]
+    total.district.cases = nrow(human.data.subset)
+    district.cases.per.year = total.district.cases / n.years
+
+    # update spatial.cases.per.year
+    district.cases$forecast.id[i] = forecast.id
+    district.cases$value = district.cases.per.year
+  }
+
+  return(district.cases)
 }
 
 
@@ -1335,7 +1452,23 @@ check.model.inputs = function(models.to.run, model.inputs){
 #'
 run.null.models = function(forecast.targets, forecasts.df, forecast.distributions, human.data,
                            week.id, weekinquestion, mosq.data = NA, population.df = NA, model.name = "NULL.MODELS"){
-  # Initialize statewide results
+
+  # Create the year column, if it is missing
+  if (length(human.data$year) == 0){
+    human.data$year = vapply(as.character(human.data$date), splitter, FUN.VALUE = numeric(1),  "/", 3)
+  }
+
+  # Calculate annual human cases
+  if ('annual.human.cases' %in% forecast.targets){
+
+    statewide.cases = statewide.cases.null.model(human.data, n.years, model.name, week.id)
+    forecasts.df = update.df2(forecasts.df, statewide.cases)
+    district.cases = district.cases.null.model(human.data, n.years, model.name, week.id)
+    forecasts.df = update.df2(forecasts.df, district.cases)
+  }
+
+
+    # Initialize statewide results
   statewide.results = list()
   statewide.results$model.name = model.name
   statewide.results$forecast.id = week.id
