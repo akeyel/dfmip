@@ -145,6 +145,150 @@ test_that("Update functions work properly", {
 
 })
 
+test_that("Null model statewide calculations work properly", {
+  weekinquestion = as.Date("2018-08-15", "%Y-%m-%d") #**# Is the as.Date part necessary?
+  week.id = sprintf("test:%s", weekinquestion)
+  model.name = "TEST"
+  n.years = 14
+  human.data = dfmip::human.data
+  human.data$year = vapply(as.character(human.data$date), splitter, FUN.VALUE = numeric(1),  "/", 3)
+  set.seed(20200221)
+
+  point.estimate = 0
+  ## Test n.draws = 1
+  n.draws = 1
+  scnm.out = statewide.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
+  statewide.mean.cases = scnm.out[[1]]
+  expect_equal(nrow(statewide.mean.cases), 1)
+  expect_equal(ncol(statewide.mean.cases), 7)
+  expect_equal(round(statewide.mean.cases$value[1],1), 94.7)
+  statewide.distributions = scnm.out[[2]]
+  expect_equal(nrow(statewide.distributions), 1)
+  expect_equal(ncol(statewide.distributions), 7)
+  expect_equal(statewide.distributions[1, 7], 55.0)
+
+  # Test n.draws = 10
+  n.draws = 10
+  scnm.out = statewide.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
+  statewide.mean.cases = scnm.out[[1]]
+  expect_equal(nrow(statewide.mean.cases), 1)
+  expect_equal(ncol(statewide.mean.cases), 7)
+  expect_equal(round(statewide.mean.cases$value[1],1), 94.7)
+  statewide.distributions = scnm.out[[2]]
+  expect_equal(nrow(statewide.distributions), 1)
+  expect_equal(ncol(statewide.distributions), 16)
+  expect_equal(statewide.distributions[1, 7], 27.0)
+
+  # Test point.estimate = 1
+  point.estimate = 1
+
+  # Test n.draws = 1
+  n.draws = 1
+  scnm.out = statewide.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
+  statewide.mean.cases = scnm.out[[1]]
+  expect_equal(nrow(statewide.mean.cases), 1)
+  expect_equal(ncol(statewide.mean.cases), 7)
+  expect_equal(round(statewide.mean.cases$value[1],1), 94.7)
+  statewide.distributions = scnm.out[[2]]
+  expect_equal(nrow(statewide.distributions), 1)
+  expect_equal(ncol(statewide.distributions), 7)
+  expect_equal(statewide.distributions[1, 7], 94.7)
+
+  # Test n.draws = 10
+  n.draws = 10
+  scnm.out = statewide.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
+  statewide.mean.cases = scnm.out[[1]]
+  expect_equal(nrow(statewide.mean.cases), 1)
+  expect_equal(ncol(statewide.mean.cases), 7)
+  expect_equal(round(statewide.mean.cases$value[1],1), 94.7)
+  statewide.distributions = scnm.out[[2]]
+  expect_equal(nrow(statewide.distributions), 1)
+  expect_equal(ncol(statewide.distributions), 16)
+  expect_equal(round(statewide.distributions[1, 7], 1), 94.7)
+
+
+})
+
+
+
+test_that("Null model district calculations work properly", {
+  weekinquestion = as.Date("2018-08-15", "%Y-%m-%d") #**# Is the as.Date part necessary?
+  week.id = sprintf("test:%s", weekinquestion)
+  model.name = "TEST"
+  n.years = 14
+  human.data = dfmip::human.data
+  human.data$year = vapply(as.character(human.data$date), splitter, FUN.VALUE = numeric(1),  "/", 3)
+  set.seed(20200221)
+
+  # Test point.estimate = 0
+  point.estimate = 0
+  ## Test n.draws = 1
+  n.draws = 1
+  dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
+  district.mean.cases = dcnm.out[[1]]
+  expect_equal(nrow(district.mean.cases), 66)
+  expect_equal(ncol(district.mean.cases), 7)
+  expect_equal(round(district.mean.cases$value[1],1), 7.3)
+  district.distributions = dcnm.out[[2]]
+  expect_equal(nrow(district.distributions), 66)
+  expect_equal(ncol(district.distributions), 7)
+  expect_equal(district.distributions[66, 7], 0)
+
+  ## Test n.draws = 10
+  n.draws = 10
+  dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
+  district.mean.cases = dcnm.out[[1]]
+  expect_equal(nrow(district.mean.cases), 66)
+  expect_equal(ncol(district.mean.cases), 7)
+  expect_equal(round(district.mean.cases$value[1],1), 7.3)
+  district.distributions = dcnm.out[[2]]
+  expect_equal(nrow(district.distributions), 66)
+  expect_equal(ncol(district.distributions), 16)
+  expect_equal(district.distributions[66, 8], 0)
+
+
+  ## Test n.draws = 15
+  n.draws = 15
+  dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
+  district.mean.cases = dcnm.out[[1]]
+  expect_equal(nrow(district.mean.cases), 66)
+  expect_equal(ncol(district.mean.cases), 7)
+  expect_equal(round(district.mean.cases$value[1],1), 7.3)
+  district.distributions = dcnm.out[[2]]
+  expect_equal(nrow(district.distributions), 66)
+  expect_equal(ncol(district.distributions), 21)
+  expect_equal(district.distributions[66, 11], 32)
+
+  # Test point.estimate = 1
+  point.estimate = 1
+  ## Test n.draws = 1
+  n.draws = 1
+  dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
+  district.mean.cases = dcnm.out[[1]]
+  expect_equal(nrow(district.mean.cases), 66)
+  expect_equal(ncol(district.mean.cases), 7)
+  expect_equal(round(district.mean.cases$value[1],1), 7.3)
+  district.distributions = dcnm.out[[2]]
+  expect_equal(nrow(district.distributions), 66)
+  expect_equal(ncol(district.distributions), 7)
+  expect_equal(round(district.distributions[1, 7], 1), 7.3)
+
+
+  ## Test n.draws = 10
+  n.draws = 10
+  dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
+  district.mean.cases = dcnm.out[[1]]
+  expect_equal(nrow(district.mean.cases), 66)
+  expect_equal(ncol(district.mean.cases), 7)
+  expect_equal(round(district.mean.cases$value[1],1), 7.3)
+  district.distributions = dcnm.out[[2]]
+  expect_equal(nrow(district.distributions), 66)
+  expect_equal(ncol(district.distributions), 16)
+  expect_equal(round(district.distributions[1, 16], 1), 7.3)
+
+
+})
+
 test_that("assorted small functions all work as expected", {
 
   # Test splitter function

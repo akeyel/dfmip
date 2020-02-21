@@ -76,6 +76,8 @@ NULL
 #' arbo.inputs \tab Inputs specific to the ArboMAP model. #**# DOCUMENTATION NEEDED\cr
 #' rf1.inputs \tab Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}.\cr}
 #' @param population.df Census information for calculating incidence. Can be set to 'none' or omitted from the function call #**# NEEDS FORMAT INSTRUCTIONS
+#' @param n.draws The number of draws for the forecast distributions. Should generally be 1 if a point estimate is used, otherwise should be a large enough number to adequately represent the variation in the underlying data
+#' @param point.estimate Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.
 #'
 #' @return dfmip.outputs: List of two objects: forecasts.df (see above) and other.results
 #' other.results contains model-specific results that do not fit in the forecasts.df format
@@ -87,7 +89,7 @@ NULL
 dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data,
                      weather.data, districtshapefile, weekinquestion, week.id,
                      results.path, model.inputs = list(),
-                     population.df = 'none'){
+                     population.df = 'none', n.draws = 1000, point.estimate = 0){
 
   # Check that models to run are all valid model names
   models.in.dfmip = c("NULL.MODELS", "ArboMAP", "ArboMAP.MOD", "RF1_C", "RF1_A")
@@ -116,7 +118,8 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     message("Running NULL models")
 
     null.out = run.null.models(forecast.targets, forecasts.df, forecast.distributions, human.data,
-                            week.id, weekinquestion, mosq.data, population.df, model.name = "NULL.MODELS")
+                            week.id, weekinquestion, n.draws, point.estimate, mosq.data,
+                            population.df, model.name = "NULL.MODELS")
 
     forecasts.df = null.out[[1]]
     forecast.distributions = null.out[[2]]
@@ -897,9 +900,12 @@ date.subset = function(df, end.year, end.month, end.day, date.format){
 #'
 #' Predict the number of human cases based on historical number of human cases for the entire unit
 #'
+#' @param n.draws The number of elements to draw from the distribution.
+#' @param point.estimate Whether or not to use the mean value as a single point estimate
+#'
 #' @noRd
 #'
-statewide.cases.null.model = function(human.data, n.years, model.name, week.id){
+statewide.cases.null.model = function(human.data, n.years, model.name, week.id, n.draws, point.estimate){
 
   # unpack week.id
   UNIT = splitter(as.character(week.id), ":", 1, 1)
@@ -912,9 +918,6 @@ statewide.cases.null.model = function(human.data, n.years, model.name, week.id){
   # Calculate total number of human cases
   tot.cases = nrow(human.data)
 
-  # Calculate total number of years
-  n.years = length(unique(human.data$year))
-
   # Estimate mean cases per year
   mean.annual.cases = tot.cases / n.years
 
@@ -925,7 +928,34 @@ statewide.cases.null.model = function(human.data, n.years, model.name, week.id){
                               value = mean.annual.cases)
 
 
-  return(statewide.cases)
+  # Create distributions data frame to hold results
+  statewide.distributions = data.frame(model.name = model.name, forecast.id = forecast.id,
+                                       forecast.target = "annual.human.cases",
+                                       UNIT = UNIT, date = date, year = year)
+
+  # Populate data frame with draws for the specified number of distributions
+  if (point.estimate == 1){
+    statewide.distributions = cbind(statewide.distributions, matrix(rep(mean.annual.cases, n.draws), nrow = 1))
+  }else{
+    # Draw from historical values
+    #**# really should think about smoothing this distribution out)
+    #**# An easy way would be to do the process at the district level, then sum across disticts. That would produce continuous statewide counts, and have the benefit of making the predictions align
+    human.data$count = 1
+    historical.counts = stats::aggregate(human.data$count, by = list(human.data$year), sum, na.rm = TRUE)
+    historical.counts = historical.counts$x
+    # Add in 0's to historical counts
+    if (length(historical.counts) < n.years){
+      zeros = n.years - length(historical.counts)
+      historical.counts = c(historical.counts, rep(0, zeros))
+    }
+
+    #historical.counts = dplyr::count(human.data, vars = year)[ ,2] # Tibble wasn't playing well with sample
+    distribution.samples = sample(historical.counts, n.draws, replace = TRUE) # SAMPLE WITH REPLACEMENT FROM THE ANNUAL HUMAN CASES #**# LEFT OFF HERE
+    statewide.distributions = cbind(statewide.distributions, matrix(distribution.samples, nrow = 1))
+  }
+
+
+  return(list(statewide.cases, statewide.distributions))
 }
 
 #' District Cases Null Model
@@ -937,21 +967,27 @@ statewide.cases.null.model = function(human.data, n.years, model.name, week.id){
 #'
 #' @noRd
 #'
-district.cases.null.model = function(human.data, n.years, model.name, week.id){
+district.cases.null.model = function(human.data, n.years, model.name, week.id, n.draws, point.estimate){
 
   # unpack week.id
   UNIT = splitter(as.character(week.id), ":", 1, 1)
   date = splitter(as.character(week.id), ":", 2, 1)
   year = splitter(date, "-", 1, 0)
-
+  human.data$count = 1 # Add a count column for aggregation
+  districts = unique(human.data$district)
 
   # Data frame will be populated with values by looping through districts
-  district.cases = data.frame(model.name = model.name, forecast.id = NA,
+  district.cases = data.frame(model.name = model.name, forecast.id = rep(NA, length(districts)),
                               forecast.target = "annual.human.cases",
                               UNIT = UNIT, date = date, year = year, value = NA)
 
+  # Similar for distributions, except distributions will be added as a matrix with cbind later
+  district.distributions = data.frame(model.name = model.name, forecast.id = rep(NA, length(districts)),
+                                       forecast.target = "annual.human.cases",
+                                       UNIT = UNIT, date = date, year = year)
+
+
   # Loop over districts
-  districts = unique(human.data$district)
   for (i in seq_len(length(districts))){
 
     district = districts[i]
@@ -963,10 +999,39 @@ district.cases.null.model = function(human.data, n.years, model.name, week.id){
 
     # update spatial.cases.per.year
     district.cases$forecast.id[i] = forecast.id
-    district.cases$value = district.cases.per.year
+    district.cases$value[i] = district.cases.per.year
+
+    # Update distributions
+    district.distributions$forecast.id[i] = forecast.id
+    if (point.estimate == 1){
+      if (i == 1){  distributions.matrix = matrix(rep(district.cases.per.year, n.draws), nrow = 1)
+      }else{
+        distributions.matrix = rbind(distributions.matrix, rep(district.cases.per.year, n.draws))
+      }
+    }else{
+      # Draw from historical values (really should think about smoothing this distribution out)
+      historical.counts = stats::aggregate(human.data.subset$count, by = list(human.data.subset$year), sum, na.rm = TRUE)
+      historical.counts = historical.counts$x
+      # Add in 0's to historical counts
+      if (length(historical.counts) < n.years){
+        zeros = n.years - length(historical.counts)
+        historical.counts = c(historical.counts, rep(0, zeros))
+      }
+      distribution.samples = sample(historical.counts, n.draws, replace = TRUE) # SAMPLE WITH REPLACEMENT FROM THE ANNUAL HUMAN CASES #**# LEFT OFF HERE
+
+      if (i == 1){
+        distributions.matrix = matrix(distribution.samples, nrow = 1)
+      }else{
+        distributions.matrix = rbind(distributions.matrix, distribution.samples)
+      }
+    }
   }
 
-  return(district.cases)
+  #**# Watch for issues with the distributions.matrix
+  distributions.matrix = matrix(distributions.matrix, nrow = length(districts)) # Ensure that it is a matrix, even if there is only one district and R changes the matrix to a row
+  district.distributions = cbind(district.distributions, distributions.matrix)
+
+  return(list(district.cases, district.distributions))
 }
 
 
@@ -1444,6 +1509,8 @@ check.model.inputs = function(models.to.run, model.inputs){
 #' @param human.data See \code{\link{dfmip.forecast}}
 #' @param week.id See \code{\link{dfmip.forecast}}
 #' @param weekinquestion See \code{\link{dfmip.forecast}}
+#' @param n.draws The number of draws for the forecast distributions. Should be 1 if a point estimate is used, otherwise should be a large enough number to adequately represent the variation in the underlying data
+#' @param point.estimate Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.
 #' @param mosq.data Only required if a mosquito output is among the forecast targets. See \code{\link{dfmip.forecast}}
 #' @param population.df A data frame with districts (counties) and their populations. A column labeled SPATIAL should contain the county/district information, while population should be in a TOTAL_POPULATION column. Only required if incidence calculations are desired.
 #' @param model.name The name of the model to use in forecasts.df and forecast.distributions
@@ -1451,7 +1518,8 @@ check.model.inputs = function(models.to.run, model.inputs){
 #' @return A list consisting of a data frame with forecast results and a list of forecast distributions
 #'
 run.null.models = function(forecast.targets, forecasts.df, forecast.distributions, human.data,
-                           week.id, weekinquestion, mosq.data = NA, population.df = NA, model.name = "NULL.MODELS"){
+                           week.id, weekinquestion, n.draws, point.estimate, mosq.data = NA,
+                           population.df = NA, model.name = "NULL.MODELS"){
 
   # Create the year column, if it is missing
   if (length(human.data$year) == 0){
@@ -1461,42 +1529,35 @@ run.null.models = function(forecast.targets, forecasts.df, forecast.distribution
   # Calculate annual human cases
   if ('annual.human.cases' %in% forecast.targets){
 
-    statewide.cases = statewide.cases.null.model(human.data, n.years, model.name, week.id)
+    # Calculate total number of years
+    n.years = length(unique(human.data$year))
+
+    # Calculate statewide results
+    scnm.out = statewide.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
+    statewide.cases = scnm.out[[1]]
+    statewide.distributions = scnm.out[[2]]
+
+    # Update outputs
     forecasts.df = update.df2(forecasts.df, statewide.cases)
-    district.cases = district.cases.null.model(human.data, n.years, model.name, week.id)
+    forecast.distributions = update.distribution2(forecast.distributions, statewide.distributions)
+
+    # Calculate district-specific results
+    dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
+    district.cases = dcnm.out[[1]]
+    district.distributions = dcnm.out[[2]]
+
+    # Update outputs
     forecasts.df = update.df2(forecasts.df, district.cases)
+    forecast.distributions = update.distribution2(forecast.distributions, district.distributions)
   }
 
-
-    # Initialize statewide results
-  statewide.results = list()
-  statewide.results$model.name = model.name
-  statewide.results$forecast.id = week.id
-  statewide.results$multiplier = NA #**# Should this be incidence? #**# IS THIS OBJECT NEEDED?
-
-  # Initialize statewide.distributions
-  statewide.distributions = list()
-
-  # Statewide incidence
-  # Calculate total number of human cases
-  tot.cases = nrow(human.data)
-
-  # Create the year column, if it is missing
-  if (length(human.data$year) == 0){
-    #human.data$year = sapply(as.character(human.data$date), splitter,  "/", 3)
-    human.data$year = vapply(as.character(human.data$date), splitter, FUN.VALUE = numeric(1),  "/", 3)
-  }
-
-  # Calculate total number of years
-  n.years = length(seq(min(human.data$year), max(human.data$year)))
-
-  # Estimate mean cases per year
-  mean.annual.cases = tot.cases / n.years
-
-  # Update results objects for human cases
-  if ('annual.human.cases' %in% forecast.targets){
-    statewide.results$annual.human.cases = mean.annual.cases
-    statewide.distributions$annual.human.cases = mean.annual.cases #**# ALL WE NEED IS A SD AND WE COULD GIVE A NORMAL DISTRIBUTION HERE!
+  # Calculate annual human incidence
+  # Estimate incidence
+  if ("human.incidence" %in% forecast.targets){
+    stop("human.incidence is not yet supported by the null.model")
+    mean.incidence = mean.incidence.model(human.data, population.df, mean.annual.cases, n.years)
+    incidence.per.year = mean.incidence[[1]]
+    spatial.cases.per.year = mean.incidence[[2]]
   }
 
   # Estimate mean annual MLE
@@ -1517,15 +1578,12 @@ run.null.models = function(forecast.targets, forecasts.df, forecast.distribution
     statewide.distributions$seasonal.mosquito.MLE = mean.seasonal.mosquito.MLE
   }
 
-  # Estimate incidence
-  if ("human.incidence" %in% forecast.targets){
-    mean.incidence = mean.incidence.model(human.data, population.df, mean.annual.cases, n.years)
-    incidence.per.year = mean.incidence[[1]]
-    spatial.cases.per.year = mean.incidence[[2]]
-  }
 
   # Forecast expected week's cases based on previous number of cases in this particular week
   if ("weeks.cases" %in% forecast.targets){
+
+    stop("weeks.cases not fully scripted for null model yet.")
+    #**# Condense this into a separate function to improve flow of code
     # Get the first 4 characters of weekinquestion and convert to a numeric year
     focal.year = as.numeric(substring(as.character(weekinquestion), 1,4))
     focal.month = as.numeric(substring(as.character(weekinquestion),6,7))
@@ -1550,19 +1608,6 @@ run.null.models = function(forecast.targets, forecasts.df, forecast.distribution
     statewide.results$weeks.cases = weeks.cases
   }
 
-  # Features to add in the future
-  # statewide.results$annual.positive.district.weeks = NA #**# In the future, extract this from the historical mosquito data
-  # # Initialize district-specific results
-  # district.results = list()
-  # district.results$model.name = "DISTRICT.INCIDENCE"
-  # district.results$forecast.id = week.id
-  # district.results$multiplier = NA # Use incidence?
-  # #**# Add additional fields once this is supported
-  #**# Un-comment once district-specific results are supported by the code
-  #forecasts.df = update.df(forecasts.df, district.results, observed.inputs)
-
-  # Update output objects
-  forecasts.df = update.df(forecast.targets, forecasts.df, statewide.results)
   forecast.distributions = update.distribution(forecast.targets, statewide.results$model.name, statewide.results$forecast.id, forecast.distributions, statewide.distributions)
 
   return(list(forecasts.df, forecast.distributions))
