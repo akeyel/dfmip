@@ -79,11 +79,15 @@ NULL
 #' @param n.draws The number of draws for the forecast distributions. Should generally be 1 if a point estimate is used, otherwise should be a large enough number to adequately represent the variation in the underlying data
 #' @param point.estimate Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.
 #'
-#' @return dfmip.outputs: List of two objects: forecasts.df (see above) and other.results
-#' other.results contains model-specific results that do not fit in the forecasts.df format
-#' and can be accessed by keywords. For example, for the RF1 model, other.results$rf1 will
-#' return a list. The first list entry contains the mosquito results, the second contains the human results.
-#' See Random Forest 1 Model outputs (below) for details
+#' @return dfmip.outputs: List of three objects: \tabular{ll}{
+#' forecasts.df \tab A data frame with 7 columns: The model name, the forecast id, the forecast target, the geographic scope of the forecast
+#' the forecast date, the forecast year, and the estimated value for the forecast target.
+#' forecast.distributions \tab A data frame with 6 fixed columns, and n.draws additional columns. The six fixed columns are:
+#' The model name, the forecast id, the forecast target, the geographic scope of the forecast
+#' the forecast date, and the forecast year.
+#' other.results \tab A keyed list of model-specific results that are not extracted in forecasts.df or forecast.distributions.
+#' They can be accessed by keyword, for example, for the RF1_C model, other.results$rf1c will
+#' return a list with the random forest outputs see rf1.outputs in RF1 package for details}.\cr
 #'
 #' @export dfmip.forecast
 dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data,
@@ -112,6 +116,11 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
   # Create an object to hold other model outputs
   other.outputs = list()
 
+  # unpack week.id
+  UNIT = splitter(as.character(week.id), ":", 1, 1)
+  date = splitter(as.character(week.id), ":", 2, 1)
+  year = splitter(date, "-", 1, 0)
+
   # Run the Null models
   if ("NULL.MODELS" %in% models.to.run){
 
@@ -127,6 +136,8 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
   # Run ArboMAP model
   if ("ArboMAP" %in% models.to.run){
+
+    stop("ArboMAP model requires updates")
 
     # Check that ArboMAP is installed
     if(!requireNamespace('ArboMAP')){
@@ -163,6 +174,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     ArboMAP.distributions$annual.human.cases = ArboMAP.results$annual.human.cases
     ArboMAP.distributions$seasonal.mosquito.MLE = NA
 
+    #**# OUT-DATED
     forecasts.df = update.df(forecast.targets, forecasts.df, ArboMAP.results)
     forecast.distributions = update.distribution(forecast.targets, ArboMAP.results$model.name, ArboMAP.results$forecast.id, forecast.distributions, ArboMAP.distributions)
 
@@ -170,6 +182,9 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
   # Run the modified ArboMAP model
   if ("ArboMAP.MOD" %in% models.to.run){
+
+    stop("ArboMAP model requires updates")
+
     # Check that ArboMAP is installed
     if(!requireNamespace("ArboMAP")){
       stop('ArboMAP package must be installed. You can do this with devtools::install_github("akeyel/ArboMAP/ArboMAP_package", ref = "package_test")')
@@ -234,14 +249,29 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
                       weekinquestion, rf1.inputs.no.extras, rf1.results.path)
 
     RF1.results = RF1.out[[1]]
-    RF1.results$model.name = "RF1_C"
-    RF1.results$forecast.id = week.id
+    RF1.forecast.distributions = RF1.out[[2]]
+
+    RF1.model.name = "RF1_C"
+    RF1.forecast.id = sprintf("%s:%s-STATEWIDE", week.id, UNIT)
     other.outputs$rf1c = RF1.results$other.results
 
-    forecasts.df = update.df(forecast.targets, forecasts.df, RF1.results)
+    if ('annual.human.cases' %in% forecast.targets){
+      RF1.record = c(RF1.model.name, RF1.forecast.id, 'annual.human.cases', UNIT, date, year, RF1.results$annual.human.cases)
+      forecasts.df = update.df2(forecasts.df, RF1.record)
 
-    RF1.forecast.distributions = RF1.out[[2]]
-    forecast.distributions = update.distribution(forecast.targets, RF1.results$model.name, RF1.results$forecast.id, forecast.distributions, RF1.forecast.distributions)
+      RF1.distribution.record = c(RF1.model.name, RF1.forecast.id, 'annual.human.cases', UNIT, date, year, as.matrix(RF1.forecast.distributions$annual.human.cases, nrow = 1))
+      forecast.distributions = update.distribution2(forecast.distributions, RF1.distribution.record)
+      #forecast.distributions = update.distribution(forecast.targets, RF1.results$model.name, RF1.results$forecast.id, forecast.distributions, RF1.forecast.distributions)
+    }
+
+    if ('seasonal.mosquito.MLE' %in% forecast.targets){
+      RF1.record = c(RF1.model.name, RF1.forecast.id, 'seasonal.mosquito.MLE', UNIT, date, year, RF1.results$seasonal.mosquito.MLE)
+      forecasts.df = update.df2(forecasts.df, RF1.record)
+
+      RF1.distribution.record = c(RF1.model.name, RF1.forecast.id, 'seasonal.mosquito.MLE', UNIT, date, year, as.matrix(RF1.forecast.distributions$seasonal.mosquito.MLE, nrow = 1))
+      forecast.distributions = update.distribution2(forecast.distributions, RF1.distribution.record)
+      #forecast.distributions = update.distribution(forecast.targets, RF1.results$model.name, RF1.results$forecast.id, forecast.distributions, RF1.forecast.distributions)
+    }
   }
 
   # Run the Random Forest 1 model with all available inputs
@@ -267,14 +297,29 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
                       weekinquestion, rf1.inputs, rf1.results.path)
 
     RF1.results = RF1.out[[1]]
-    RF1.results$model.name = "RF1_A"
-    RF1.results$forecast.id = week.id
+    RF1.forecast.distributions = RF1.out[[2]]
+
+    RF1.model.name = "RF1_A"
+    RF1.forecast.id = sprintf("%s:%s-STATEWIDE", week.id, UNIT)
     other.outputs$rf1a = RF1.results$other.results
 
-    forecasts.df = update.df(forecast.targets, forecasts.df, RF1.results)
+    if ('annual.human.cases' %in% forecast.targets){
+      RF1.record = c(RF1.model.name, RF1.forecast.id, 'annual.human.cases', UNIT, date, year, RF1.results$annual.human.cases)
+      forecasts.df = update.df2(forecasts.df, RF1.record)
 
-    RF1.forecast.distributions = RF1.out[[2]]
-    forecast.distributions = update.distribution(forecast.targets, RF1.results$model.name, RF1.results$forecast.id, forecast.distributions, RF1.forecast.distributions)
+      RF1.distribution.record = c(RF1.model.name, RF1.forecast.id, 'annual.human.cases', UNIT, date, year, as.matrix(RF1.forecast.distributions$annual.human.cases, nrow = 1))
+      forecast.distributions = update.distribution2(forecast.distributions, RF1.distribution.record)
+      #forecast.distributions = update.distribution(forecast.targets, RF1.results$model.name, RF1.results$forecast.id, forecast.distributions, RF1.forecast.distributions)
+    }
+
+    if ('seasonal.mosquito.MLE' %in% forecast.targets){
+      RF1.record = c(RF1.model.name, RF1.forecast.id, 'seasonal.mosquito.MLE', UNIT, date, year, RF1.results$seasonal.mosquito.MLE)
+      forecasts.df = update.df2(forecasts.df, RF1.record)
+
+      RF1.distribution.record = c(RF1.model.name, RF1.forecast.id, 'seasonal.mosquito.MLE', UNIT, date, year, as.matrix(RF1.forecast.distributions$seasonal.mosquito.MLE, nrow = 1))
+      forecast.distributions = update.distribution2(forecast.distributions, RF1.distribution.record)
+      #forecast.distributions = update.distribution(forecast.targets, RF1.results$model.name, RF1.results$forecast.id, forecast.distributions, RF1.forecast.distributions)
+    }
   }
 
   return(list(forecasts.df, forecast.distributions, other.outputs))
