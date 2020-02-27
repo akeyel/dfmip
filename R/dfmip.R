@@ -775,6 +775,48 @@ update.df2 = function(forecasts.df, results.df){
 #' }
 #'
 
+#forecast.distributions, RF1.distribution.record
+
+#' Update list of forecast distributions
+#'
+#' @description forecasts.df should be initialized as NA if it does not already exist and contain data.
+#' Otherwise, it is updated with the results. This function provides a standardized format for inputting
+#' data from different models in to a common data frame
+#'
+#' @param forecast.distributions A data frame containing the forecast distributions \code{\link{dfmip.forecast}} for format
+#' @param results.object The record or records to add to the forecast.distributions object
+#'
+#' @return forecast.distributions The updated data frame containing the forecast distributions
+#'
+#' @noRd
+#'
+update.distribution2 = function(forecast.distributions, results.object){
+
+  # Create the results object if it does not already exist
+  if (length(forecast.distributions) < 2){
+    # Confirm that this was triggered by an NA
+    # The length step is needed to avoid a warning about length > 1 when the forecasts.distributions object exists.
+    if (!is.na(forecast.distributions)){ stop("Something went very wrong with the update.distribution2 function") }
+
+    forecast.distributions = results.object
+
+    # Ensure that fields come in as character, so that factor levels are not locked and fields are fully updateable
+    forecast.distributions$model.name = as.character(forecast.distributions$model.name)
+    forecast.distributions$forecast.id = as.character(forecast.distributions$forecast.id)
+    forecast.distributions$UNIT = as.character(forecast.distributions$UNIT)
+    forecast.distributions$date = as.character(forecast.distributions$date)
+
+    # Otherwise, update it using rbind
+  }else{
+    forecast.distributions = rbind(forecast.distributions, results.object)
+
+    #**# Watch for problems caused by non-numeric fields. annual.human.cases and seasonal.mosquito.MLE and year should be numeric, but forecast week will need to be a date.
+  }
+
+  return(forecast.distributions)
+}
+
+
 #' Update list of forecast distributions
 #'
 #' @description forecasts.df should be initialized as NA if it does not already exist and contain data.
