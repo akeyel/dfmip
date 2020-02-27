@@ -1695,8 +1695,6 @@ run.null.models = function(forecast.targets, forecasts.df, forecast.distribution
     statewide.results$weeks.cases = weeks.cases
   }
 
-  forecast.distributions = update.distribution(forecast.targets, statewide.results$model.name, statewide.results$forecast.id, forecast.distributions, statewide.distributions)
-
   return(list(forecasts.df, forecast.distributions))
 }
 
