@@ -6,8 +6,8 @@
 \usage{
 dfmip.forecast(forecast.targets, models.to.run, human.data, mosq.data,
   weather.data, districtshapefile, weekinquestion, week.id, results.path,
-  arbo.inputs = "none", observed.inputs = "none",
-  population.df = "none", rf1.inputs = "none")
+  model.inputs = list(), population.df = "none", n.draws = 1000,
+  point.estimate = 0)
 }
 \arguments{
 \item{forecast.targets}{The quantities for which hindcasts are to be made. Options are: \tabular{ll}{
@@ -39,20 +39,26 @@ The read.weather.data function from ArboMAP is a useful way to process one or mo
 
 \item{results.path}{The base path in which to place the modeling results. Some models will create sub-folders for model specific results}
 
-\item{arbo.inputs}{Inputs specific to the ArboMAP model. If the ArboMAP model or ArboMAP.MOD model are not being run, this should be set to 'none' or omitted from the function call}
-
-\item{observed.inputs}{Observed values to be used for comparison purposes. Not relevant for forecasts, but of interest for evaluating hindcasts. If unused, set the variable to NA or omit from the function call}
+\item{model.inputs}{A keyed list of model-specific inputs. Keyed entry options are: \tabular{ll}{
+arbo.inputs \tab Inputs specific to the ArboMAP model. #**# DOCUMENTATION NEEDED\cr
+rf1.inputs \tab Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}.\cr}}
 
 \item{population.df}{Census information for calculating incidence. Can be set to 'none' or omitted from the function call #**# NEEDS FORMAT INSTRUCTIONS}
 
-\item{rf1.inputs}{Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}. If this model is not included, this should be set to 'none' or omitted from the function call #**# LINK TO AN OBJECT WITH MORE DETAILS}
+\item{n.draws}{The number of draws for the forecast distributions. Should generally be 1 if a point estimate is used, otherwise should be a large enough number to adequately represent the variation in the underlying data}
+
+\item{point.estimate}{Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.}
 }
 \value{
-dfmip.outputs: List of two objects: forecasts.df (see above) and other.results
-other.results contains model-specific results that do not fit in the forecasts.df format
-and can be accessed by keywords. For example, for the RF1 model, other.results$rf1 will
-return a list. The first list entry contains the mosquito results, the second contains the human results.
-See Random Forest 1 Model outputs (below) for details
+dfmip.outputs: List of three objects: \tabular{ll}{
+forecasts.df \tab A data frame with 7 columns: The model name, the forecast id, the forecast target, the geographic scope of the forecast
+the forecast date, the forecast year, and the estimated value for the forecast target.\cr
+forecast.distributions \tab A data frame with 6 fixed columns, and n.draws additional columns. The six fixed columns are:
+The model name, the forecast id, the forecast target, the geographic scope of the forecast
+the forecast date, and the forecast year.\cr
+other.results \tab A keyed list of model-specific results that are not extracted in forecasts.df or forecast.distributions.
+They can be accessed by keyword, for example, for the RF1_C model, other.results$rf1c will
+return a list with the random forest outputs see rf1.outputs in RF1 package for details.\cr}
 }
 \description{
 Generate forecasts for multiple mosquito-borne disease models using a single interface.

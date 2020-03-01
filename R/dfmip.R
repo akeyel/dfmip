@@ -81,13 +81,13 @@ NULL
 #'
 #' @return dfmip.outputs: List of three objects: \tabular{ll}{
 #' forecasts.df \tab A data frame with 7 columns: The model name, the forecast id, the forecast target, the geographic scope of the forecast
-#' the forecast date, the forecast year, and the estimated value for the forecast target.
+#' the forecast date, the forecast year, and the estimated value for the forecast target.\cr
 #' forecast.distributions \tab A data frame with 6 fixed columns, and n.draws additional columns. The six fixed columns are:
 #' The model name, the forecast id, the forecast target, the geographic scope of the forecast
-#' the forecast date, and the forecast year.
+#' the forecast date, and the forecast year.\cr
 #' other.results \tab A keyed list of model-specific results that are not extracted in forecasts.df or forecast.distributions.
 #' They can be accessed by keyword, for example, for the RF1_C model, other.results$rf1c will
-#' return a list with the random forest outputs see rf1.outputs in RF1 package for details}.\cr
+#' return a list with the random forest outputs see rf1.outputs in RF1 package for details.\cr}
 #'
 #' @export dfmip.forecast
 dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data,
@@ -174,9 +174,9 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     ArboMAP.distributions$annual.human.cases = ArboMAP.results$annual.human.cases
     ArboMAP.distributions$seasonal.mosquito.MLE = NA
 
-    #**# OUT-DATED
-    forecasts.df = update.df(forecast.targets, forecasts.df, ArboMAP.results)
-    forecast.distributions = update.distribution(forecast.targets, ArboMAP.results$model.name, ArboMAP.results$forecast.id, forecast.distributions, ArboMAP.distributions)
+    #**# OUT-DATED FIX WITH NEW CALL
+    #forecasts.df = update.df(forecast.targets, forecasts.df, ArboMAP.results)
+    #forecast.distributions = update.distribution(forecast.targets, ArboMAP.results$model.name, ArboMAP.results$forecast.id, forecast.distributions, ArboMAP.distributions)
 
   }
 
@@ -219,9 +219,10 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     ArboMAP.distributions$annual.human.cases = ArboMAP.results$human.cases
     ArboMAP.distributions$seasonal.mosquito.MLE = NA
 
-    forecasts.df = update.df(forecast.targets, forecasts.df, ArboMAP.results)
+    #**# UPDATE THIS
+    #forecasts.df = update.df(forecast.targets, forecasts.df, ArboMAP.results)
 
-    forecast.distributions = update.distribution(forecast.targets, ArboMAP.results$model.name, ArboMAP.results$forecast.id, forecast.distributions, ArboMAP.distributions)
+    #forecast.distributions = update.distribution(forecast.targets, ArboMAP.results$model.name, ArboMAP.results$forecast.id, forecast.distributions, ArboMAP.distributions)
 
   }
 
@@ -321,6 +322,9 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
       #forecast.distributions = update.distribution(forecast.targets, RF1.results$model.name, RF1.results$forecast.id, forecast.distributions, RF1.forecast.distributions)
     }
   }
+
+  # Make sure forecasts.targets are not converted to factor
+  forecasts.df$forecast.target = as.character(forecasts.df$forecast.target)
 
   return(list(forecasts.df, forecast.distributions, other.outputs))
 }
@@ -431,12 +435,15 @@ NULL
 #' @param season_start_month The first month of the mosquito season, as a number. E.g., July would be 7.
 #' @param weeks_in_season The number of weeks to sample
 #' @param sample_frequency How frequently sample (default, 1 = weekly) #**# Other options are not currently supported
+#' @param n.draws The number of draws for the forecast distributions. Should generally be 1 if a point estimate is used, otherwise should be a large enough number to adequately represent the variation in the underlying data
+#' @param point.estimate Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.
 #'
 #' @export dfmip.hindcasts
 dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.data, mosq.data,
                            weather.data, districtshapefile, results.path, model.inputs = list(),
                            population.df = 'none', threshold = 'default', percentage = 'default',
-                           id.string = "", season_start_month = 7, weeks_in_season = 2, sample_frequency = 1){
+                           id.string = "", season_start_month = 7, weeks_in_season = 2, sample_frequency = 1,
+                           n.draws = 1000, point.estimate = 0){
 
   # Indicator to denote the first time through the loop
   first = 1
@@ -536,11 +543,15 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
       if (length(actual.models.to.run) > 0){
         # Update the max observed human date (but this should not be critical, as we have removed data from the current year)
         #**# but a future version might make that change specific to ArboMAP
-        arbo.inputs[[2]] = maxobservedhumandate
+        if ("ArboMAP" %in% actual.models.to.run){
+          arbo.inputs = model.inputs$arbo.inputs
+          arbo.inputs[[2]] = maxobservedhumandate
+          model.inputs$arbo.inputs = arbo.inputs
+        }
 
         out = dfmip.forecast(forecast.targets, actual.models.to.run, human.data.subset, mosq.data.subset, weather.data.subset,
                              districtshapefile, weekinquestion, week.id, results.path,
-                             model.inputs, population.df)
+                             model.inputs, population.df, n.draws = n.draws, point.estimate = point.estimate)
         out.forecasts = out[[1]]
         out.distributions = out[[2]]
 
@@ -551,102 +562,95 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
         }else{
           #test.type(out.forecasts, 'Line536')
           forecasts.df = rbind(forecasts.df, out.forecasts)
+          forecast.distributions = rbind(forecast.distributions, out.distributions)
 
-          if ("annual.human.cases" %in% forecast.targets){
-            human.cases.list = forecast.distributions[['annual.human.cases']]
-            human.cases.list = append(human.cases.list, out.distributions$annual.human.cases)
-            forecast.distributions[['annual.human.cases']] = human.cases.list
-          }
-          if ("seasonal.mosquito.MLE" %in% forecast.targets){
-            seasonal.mosquito.MLE.list = forecast.distributions[['seasonal.mosquito.MLE']]
-            seasonal.mosquito.MLE.list = append(seasonal.mosquito.MLE.list, out.distributions$seasonal.mosquito.MLE)
-            forecast.distributions[['seasonal.mosquito.MLE']] = seasonal.mosquito.MLE.list
-          }
         }
       }
     }
   }
 
-  # Create accuracy summary object
-  accuracy.summary = data.frame(model = rep(models.to.run, length(forecast.targets)))
+  accuracy.summary = NA
 
-  # Loop through forecast targets
-  for (i in seq_len(length(forecast.targets))){
-    forecast.target = forecast.targets[i]
-    #message("Checking distributions that have been output")
-    #message(str(forecast.distributions))
-
-    target.distributions = forecast.distributions[[forecast.target]]
-    #message(names(target.distributions))
-
-    keys = names(target.distributions)
-    #models = sapply(keys, splitter, ':', 1, as.string = 1)
-    models = vapply(keys, splitter, FUN.VALUE = character(1), ':', 1, as.string = 1)
-
-    # Calculate accuracy over all forecasts for each model
-    for (j in seq_len(length(models.to.run))){
-      model = models.to.run[j]
-
-      model.regex = sprintf("\\b%s\\b", model) # Add breaks to search for ONLY the model, and not any that have the model as part of the name.
-      # Get an index of which forecasts belong to this model
-      model.index = grep(model.regex, models)
-
-      # Check that model results were extracted. If not, throw an error, and present possible causes
-      if (length(model.index) == 0){
-        stop(sprintf("No results for %s model. Models included in the results are %s. Please check for a typo in the model names", model, paste(models, collapse = ', ')))
-      }
-
-      observations.vec = c()
-
-      # Create forecast distributions matrix and observation vector
-      for (k in seq_len(length(model.index))){
-        this.index.value = model.index[k]
-        this.key = keys[this.index.value]
-        #message(this.key)
-        this.distribution = target.distributions[[this.key]]
-
-        this.key = as.character(this.key) # Ensure the key is in character format
-        this.date = splitter(this.key, ":", 3, 1)
-        this.date = as.character(this.date)
-        this.year = splitter(this.date, '-', 1)
-        this.year.key = sprintf("x%s", this.year)
-
-        #message(model)
-        #message(this.index.value)
-        #message(this.key)
-        #message(this.date)
-        #message(forecast.target)
-        #message(this.year.key)
-        #message(str(observation.list))
-        #message(paste(model.index, collapse = ',')) #**# IS model.index NA for soemthing?
-        this.observation = observation.list[[forecast.target]][[this.year.key]]
-
-        # Create/update a distributions matrix to hold values
-        if (k == 1){
-          model.forecast.distributions = matrix(this.distribution, nrow = 1)
-          rownames(model.forecast.distributions) = this.key
-        }else{
-          #**# Rbind assumes the matrices are the same length. Otherwise need to add code to pad with NA's. Solve this defect when it is actually a problem.
-          #test.type(this.distribution, 'Line536')
-          model.forecast.distributions = rbind(model.forecast.distributions, this.distribution)
-          rownames(model.forecast.distributions)[k] = this.key
-        }
-
-        # Create/update an observation vector to hold observations
-        observations.vec = c(observations.vec, this.observation)
-      }
-
-      # Assess hindcast accuracy for each target
-      target.accuracy.metrics = assess.accuracy(model.forecast.distributions, observations.vec, forecast.target)
-
-      # Update accuracy.summary
-      for (item in names(target.accuracy.metrics)){
-        position.index = j + (j* (i-1))
-        accuracy.summary$forecast.target[position.index] = forecast.target
-        accuracy.summary[[item]][position.index] = target.accuracy.metrics[[item]]
-      }
-    }
-  }
+  # # Create accuracy summary object
+  # accuracy.summary = data.frame(model = rep(models.to.run, length(forecast.targets)))
+  #
+  # # Loop through forecast targets
+  # for (i in seq_len(length(forecast.targets))){
+  #   forecast.target = forecast.targets[i]
+  #   #message("Checking distributions that have been output")
+  #   #message(str(forecast.distributions))
+  #
+  #   target.distributions = forecast.distributions[[forecast.target]]
+  #   #message(names(target.distributions))
+  #
+  #   keys = names(target.distributions)
+  #   #models = sapply(keys, splitter, ':', 1, as.string = 1)
+  #   models = vapply(keys, splitter, FUN.VALUE = character(1), ':', 1, as.string = 1)
+  #
+  #   # Calculate accuracy over all forecasts for each model
+  #   for (j in seq_len(length(models.to.run))){
+  #     model = models.to.run[j]
+  #
+  #     model.regex = sprintf("\\b%s\\b", model) # Add breaks to search for ONLY the model, and not any that have the model as part of the name.
+  #     # Get an index of which forecasts belong to this model
+  #     model.index = grep(model.regex, models)
+  #
+  #     # Check that model results were extracted. If not, throw an error, and present possible causes
+  #     if (length(model.index) == 0){
+  #       stop(sprintf("No results for %s model. Models included in the results are %s. Please check for a typo in the model names", model, paste(models, collapse = ', ')))
+  #     }
+  #
+  #     observations.vec = c()
+  #
+  #     # Create forecast distributions matrix and observation vector
+  #     for (k in seq_len(length(model.index))){
+  #       this.index.value = model.index[k]
+  #       this.key = keys[this.index.value]
+  #       #message(this.key)
+  #       this.distribution = target.distributions[[this.key]]
+  #
+  #       this.key = as.character(this.key) # Ensure the key is in character format
+  #       this.date = splitter(this.key, ":", 3, 1)
+  #       this.date = as.character(this.date)
+  #       this.year = splitter(this.date, '-', 1)
+  #       this.year.key = sprintf("x%s", this.year)
+  #
+  #       #message(model)
+  #       #message(this.index.value)
+  #       #message(this.key)
+  #       #message(this.date)
+  #       #message(forecast.target)
+  #       #message(this.year.key)
+  #       #message(str(observation.list))
+  #       #message(paste(model.index, collapse = ',')) #**# IS model.index NA for soemthing?
+  #       this.observation = observation.list[[forecast.target]][[this.year.key]]
+  #
+  #       # Create/update a distributions matrix to hold values
+  #       if (k == 1){
+  #         model.forecast.distributions = matrix(this.distribution, nrow = 1)
+  #         rownames(model.forecast.distributions) = this.key
+  #       }else{
+  #         #**# Rbind assumes the matrices are the same length. Otherwise need to add code to pad with NA's. Solve this defect when it is actually a problem.
+  #         #test.type(this.distribution, 'Line536')
+  #         model.forecast.distributions = rbind(model.forecast.distributions, this.distribution)
+  #         rownames(model.forecast.distributions)[k] = this.key
+  #       }
+  #
+  #       # Create/update an observation vector to hold observations
+  #       observations.vec = c(observations.vec, this.observation)
+  #     }
+  #
+  #     # Assess hindcast accuracy for each target
+  #     target.accuracy.metrics = assess.accuracy(model.forecast.distributions, observations.vec, forecast.target)
+  #
+  #     # Update accuracy.summary
+  #     for (item in names(target.accuracy.metrics)){
+  #       position.index = j + (j* (i-1))
+  #       accuracy.summary$forecast.target[position.index] = forecast.target
+  #       accuracy.summary[[item]][position.index] = target.accuracy.metrics[[item]]
+  #     }
+  #   }
+  # }
 
   return(list(accuracy.summary, forecasts.df, forecast.distributions))
 }
@@ -808,6 +812,8 @@ update.distribution2 = function(forecast.distributions, results.object){
 
     # Otherwise, update it using rbind
   }else{
+    #message(paste(names(forecast.distributions), collapse = ", "))
+    #message(paste(names(results.object), collapse = ', '))
     forecast.distributions = rbind(forecast.distributions, results.object)
 
     #**# Watch for problems caused by non-numeric fields. annual.human.cases and seasonal.mosquito.MLE and year should be numeric, but forecast week will need to be a date.
@@ -1040,7 +1046,6 @@ statewide.cases.null.model = function(human.data, n.years, model.name, week.id, 
     distribution.samples = sample(historical.counts, n.draws, replace = TRUE) # SAMPLE WITH REPLACEMENT FROM THE ANNUAL HUMAN CASES #**# LEFT OFF HERE
     statewide.distributions = cbind(statewide.distributions, matrix(distribution.samples, nrow = 1))
   }
-
 
   return(list(statewide.cases, statewide.distributions))
 }
@@ -1622,7 +1627,7 @@ run.null.models = function(forecast.targets, forecasts.df, forecast.distribution
     # Calculate statewide results
     scnm.out = statewide.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
     statewide.cases = scnm.out[[1]]
-    statewide.distributions = scnm.out[[2]]
+    statewide.distributions = fix.labels(scnm.out[[2]])
 
     # Update outputs
     forecasts.df = update.df2(forecasts.df, statewide.cases)
@@ -1631,7 +1636,7 @@ run.null.models = function(forecast.targets, forecasts.df, forecast.distribution
     # Calculate district-specific results
     dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
     district.cases = dcnm.out[[1]]
-    district.distributions = dcnm.out[[2]]
+    district.distributions = fix.labels(dcnm.out[[2]])
 
     # Update outputs
     forecasts.df = update.df2(forecasts.df, district.cases)
@@ -1642,27 +1647,38 @@ run.null.models = function(forecast.targets, forecasts.df, forecast.distribution
   # Estimate incidence
   if ("human.incidence" %in% forecast.targets){
     stop("human.incidence is not yet supported by the null.model")
-    mean.incidence = mean.incidence.model(human.data, population.df, mean.annual.cases, n.years)
-    incidence.per.year = mean.incidence[[1]]
-    spatial.cases.per.year = mean.incidence[[2]]
+    #**# mean.annual.cases is not currently returned, among other problems
+    #mean.incidence = mean.incidence.model(human.data, population.df, mean.annual.cases, n.years)
+    #incidence.per.year = mean.incidence[[1]]
+    #spatial.cases.per.year = mean.incidence[[2]]
   }
 
   # Estimate mean annual MLE
   mean.seasonal.mosquito.MLE = NA
   if ("seasonal.mosquito.MLE" %in% forecast.targets){
+
     # Check that rf1 is installed
     if(!requireNamespace("rf1")){ stop('rf1 package must be installed. You can do this with devtools::install_github("akeyel/rf1")') }
-
     md.data = rf1::calculate.MLE.v2(mosq.data, "annual")
-    MLE.vec = c()
-    for (year in unique(md.data$YEAR)){
-      year.MLE = md.data[md.data$YEAR == year, ]
-      seasonal.mosquito.MLE = mean(year.MLE$IR, na.rm = TRUE) #**# Average is problematic here, but I am not sure of a better approach at this point
-      MLE.vec = c(MLE.vec, seasonal.mosquito.MLE)
-    }
-    mean.seasonal.mosquito.MLE = mean(MLE.vec, na.rm = TRUE)
-    statewide.results$seasonal.mosquito.MLE = mean.seasonal.mosquito.MLE
-    statewide.distributions$seasonal.mosquito.MLE = mean.seasonal.mosquito.MLE
+
+    # Calculate statewide results
+    scnm.out = statewide.mle.null.model(md.data, n.years, model.name, week.id, n.draws, point.estimate)
+    statewide.MLE = scnm.out[[1]]
+    statewide.MLE.distributions = fix.labels(scnm.out[[2]])
+
+    # Update outputs
+    forecasts.df = update.df2(forecasts.df, statewide.MLE)
+    forecast.distributions = update.distribution2(forecast.distributions, statewide.MLE.distributions)
+
+    # Calculate district-specific results
+    dcnm.out = district.mle.null.model(md.data, n.years, model.name, week.id, n.draws, point.estimate)
+    district.MLE = dcnm.out[[1]]
+    district.distributions = fix.labels(dcnm.out[[2]])
+
+    # Update outputs
+    forecasts.df = update.df2(forecasts.df, district.MLE)
+    forecast.distributions = update.distribution2(forecast.distributions, district.distributions)
+
   }
 
 
@@ -1695,7 +1711,19 @@ run.null.models = function(forecast.targets, forecasts.df, forecast.distribution
     statewide.results$weeks.cases = weeks.cases
   }
 
+
   return(list(forecasts.df, forecast.distributions))
+}
+
+#' Fix Labels
+#'
+#' Ensure that forecast.distributions has a consistent set of names (apparently this can cause an error later)
+#' @noRd
+#'
+fix.labels = function(forecast.distributions){
+  value.labels = sprintf("DRAW%s", seq(1, ncol(forecast.distributions) - 6))
+  colnames(forecast.distributions) = c("model.name", "forecast.id", "forecast.target", "UNIT", "date", "year", value.labels)
+  return(forecast.distributions)
 }
 
 
@@ -1798,3 +1826,122 @@ check.inputs.targets = function(rf1.inputs, forecast.targets, warnings = TRUE){
 
   return(rf1.inputs)
 }
+
+
+#' Calculate statewide MLE null model
+#'
+#' @noRd
+#'
+statewide.mle.null.model = function(md.data, n.years, model.name, week.id, n.draws, point.estimate){
+
+  # unpack week.id
+  UNIT = splitter(as.character(week.id), ":", 1, 1)
+  date = splitter(as.character(week.id), ":", 2, 1)
+  year = splitter(date, "-", 1, 0)
+
+  # Create a forecast.id
+  forecast.id = sprintf("%s:%s-STATEWIDE", week.id, UNIT)
+
+  # Calculate mosquito MLE's statewide
+  MLE.vec = c()
+  for (year in unique(md.data$YEAR)){
+    year.MLE = md.data[md.data$YEAR == year, ]
+    seasonal.mosquito.MLE = mean(year.MLE$IR, na.rm = TRUE) #**# Average is problematic here, but I am not sure of a better approach at this point
+    MLE.vec = c(MLE.vec, seasonal.mosquito.MLE)
+  }
+  mean.seasonal.mosquito.MLE = mean(MLE.vec, na.rm = TRUE)
+
+  # Put it into a data frame for joining with other results
+  statewide.MLE = data.frame(model.name = model.name, forecast.id = forecast.id,
+                               forecast.target = "seasonal.mosquito.MLE",
+                               UNIT = UNIT, date = date, year = year,
+                               value = mean.seasonal.mosquito.MLE)
+
+  # Create distributions data frame to hold results
+  statewide.distributions = data.frame(model.name = model.name, forecast.id = forecast.id,
+                                       forecast.target = "seasonal.mosquito.MLE",
+                                       UNIT = UNIT, date = date, year = year)
+
+  # Populate data frame with draws for the specified number of distributions
+  if (point.estimate == 1){
+    statewide.distributions = cbind(statewide.distributions, matrix(rep(mean.seasonal.mosquito.MLE, n.draws), nrow = 1))
+  }else{
+    # Draw from historical values
+    #**# really should think about smoothing this distribution out)
+    #**# An easy way would be to do the process at the district level, then average across disticts. That would produce continuous statewide counts, and have the benefit of making the predictions align
+    distribution.samples = sample(MLE.vec, n.draws, replace = TRUE) # SAMPLE WITH REPLACEMENT FROM THE ANNUAL HUMAN CASES #**# LEFT OFF HERE
+    statewide.distributions = cbind(statewide.distributions, matrix(distribution.samples, nrow = 1))
+  }
+
+  return(list(statewide.MLE, statewide.distributions))
+}
+
+#' Calculate null model results for each district
+#'
+#' @noRd
+#'
+district.mle.null.model = function(md.data, n.years, model.name, week.id, n.draws, point.estimate){
+  # unpack week.id
+  UNIT = splitter(as.character(week.id), ":", 1, 1)
+  date = splitter(as.character(week.id), ":", 2, 1)
+  year = splitter(date, "-", 1, 0)
+
+  districts = unique(md.data$COUNTY) #**# Watch for problems for other spatial units
+
+  # Data frame will be populated with values by looping through districts
+  district.MLE = data.frame(model.name = model.name, forecast.id = rep(NA, length(districts)),
+                              forecast.target = "seasonal.mosquito.MLE",
+                              UNIT = UNIT, date = date, year = year, value = NA)
+
+  # Similar for distributions, except distributions will be added as a matrix with cbind later
+  district.distributions = data.frame(model.name = model.name, forecast.id = rep(NA, length(districts)),
+                                      forecast.target = "seasonal.mosquito.MLE",
+                                      UNIT = UNIT, date = date, year = year)
+  # Loop over districts
+  for (i in seq_len(length(districts))){
+
+    district = districts[i]
+    forecast.id = sprintf("%s:%s", week.id, district)
+
+    md.data.subset = md.data[md.data$COUNTY == district, ]
+
+    MLE.vec = c()
+    for (year in unique(md.data.subset$YEAR)){
+      year.MLE = md.data.subset[md.data.subset$YEAR == year, ]
+      seasonal.mosquito.MLE = mean(year.MLE$IR, na.rm = TRUE) #**# Average is problematic here, but I am not sure of a better approach at this point
+      MLE.vec = c(MLE.vec, seasonal.mosquito.MLE)
+    }
+    mean.seasonal.mosquito.MLE = mean(MLE.vec, na.rm = TRUE)
+
+    # update district.MLE dataframe
+    district.MLE$forecast.id[i] = forecast.id
+    district.MLE$value[i] = mean.seasonal.mosquito.MLE
+
+    # Update distributions
+    district.distributions$forecast.id[i] = forecast.id
+    if (point.estimate == 1){
+      if (i == 1){  distributions.matrix = matrix(rep(mean.seasonal.mosquito.MLE, n.draws), nrow = 1)
+      }else{
+        distributions.matrix = rbind(distributions.matrix, rep(mean.seasonal.mosquito.MLE, n.draws))
+      }
+    }else{
+      # Draw from historical values (really should think about smoothing this distribution out)
+      distribution.samples = sample(MLE.vec, n.draws, replace = TRUE) # SAMPLE WITH REPLACEMENT FROM THE ANNUAL HUMAN CASES #**# LEFT OFF HERE
+
+      if (i == 1){
+        distributions.matrix = matrix(distribution.samples, nrow = 1)
+      }else{
+        distributions.matrix = rbind(distributions.matrix, distribution.samples)
+      }
+    }
+  }
+
+  #**# Watch for issues with the distributions.matrix
+  distributions.matrix = matrix(distributions.matrix, nrow = length(districts)) # Ensure that it is a matrix, even if there is only one district and R changes the matrix to a row
+  district.distributions = cbind(district.distributions, distributions.matrix)
+
+  return(list(district.MLE, district.distributions))
+
+}
+
+
