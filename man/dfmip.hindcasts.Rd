@@ -6,9 +6,10 @@
 \usage{
 dfmip.hindcasts(forecast.targets, models.to.run, focal.years, human.data,
   mosq.data, weather.data, districtshapefile, results.path,
-  arbo.inputs = "none", population.df = "none", rf1.inputs = "none",
+  model.inputs = list(), population.df = "none",
   threshold = "default", percentage = "default", id.string = "",
-  season_start_month = 7, weeks_in_season = 2, sample_frequency = 1)
+  season_start_month = 7, weeks_in_season = 2, sample_frequency = 1,
+  n.draws = 1000, point.estimate = 0)
 }
 \arguments{
 \item{forecast.targets}{The quantities for which hindcasts are to be made. Options are: \tabular{ll}{
@@ -38,11 +39,11 @@ The read.weather.data function from ArboMAP is a useful way to process one or mo
 
 \item{results.path}{The base path in which to place the modeling results. Some models will create sub-folders for model specific results}
 
-\item{arbo.inputs}{Inputs specific to the ArboMAP model. If the ArboMAP model or ArboMAP.MOD model are not being run, this should be set to 'none' or omitted from the function call}
+\item{model.inputs}{A keyed list of model-specific inputs. Keyed entry options are: \tabular{ll}{
+arbo.inputs \tab Inputs specific to the ArboMAP model. #**# DOCUMENTATION NEEDED\cr
+rf1.inputs \tab Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}.\cr}}
 
 \item{population.df}{Census information for calculating incidence. Can be set to 'none' or omitted from the function call #**# NEEDS FORMAT INSTRUCTIONS}
-
-\item{rf1.inputs}{Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}. If this model is not included, this should be set to 'none' or omitted from the function call #**# LINK TO AN OBJECT WITH MORE DETAILS}
 
 \item{threshold}{For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.}
 
@@ -55,6 +56,13 @@ The read.weather.data function from ArboMAP is a useful way to process one or mo
 \item{weeks_in_season}{The number of weeks to sample}
 
 \item{sample_frequency}{How frequently sample (default, 1 = weekly) #**# Other options are not currently supported}
+
+\item{n.draws}{The number of draws for the forecast distributions. Should generally be 1 if a point estimate is used, otherwise should be a large enough number to adequately represent the variation in the underlying data}
+
+\item{point.estimate}{Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.}
+}
+\value{
+Four objects #**# ADD DOCUMENTATION. Also consider a list to hold the 'other.outputs'
 }
 \description{
 Generate hindcasts for a suite of models using common data inputs, and evaluate their accuracy using a standardized suite of validation metrics
