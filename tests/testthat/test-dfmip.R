@@ -517,16 +517,18 @@ test_that("NULL model produces the expected outputs", {
   expect_equal(ncol(forecast.distributions), 1006)
   #**# Could add additional unit tests here
 
-  skip("accuracy section needs to be recoded")
-  expect_equal(as.character(accuracy$model), "NULL.MODELS")
-  expect_equal(accuracy$forecast.target, "annual.human.cases")
-  expect_equal(round(accuracy$CRPS,1), 24.7)
-  expect_equal(round(accuracy$RMSE, 1), 24.7) #**# Why is RMSE the same as CRPS? CRPS should be absolute error, not RMSE. Is only one data point being evaluated?
-  expect_equal(round(accuracy$Scaled_RMSE, 3), 0.386)
-  expect_equal(accuracy$within_percentage, 0)
-  expect_equal(accuracy$within_threshold, 0)
-  expect_equal(accuracy$within_threshold_or_percentage, 0)
-  expect_equal(accuracy$AUC, NA)
+  # Test accuracy calculations
+  expect_equal(as.character(accuracy$model[1]), "NULL.MODELS")
+  expect_equal(accuracy$forecast.target[1], "annual.human.cases")
+  expect_equal(round(accuracy$CRPS[1],1), 21.1)
+  expect_equal(round(accuracy$RMSE[1], 1), 26.3)
+  expect_equal(round(accuracy$Scaled_RMSE[1], 3), 0.411)
+  expect_equal(accuracy$within_percentage[1], 0)
+  expect_equal(accuracy$within_threshold[1], 0)
+  expect_equal(accuracy$within_threshold_or_percentage[1], 0)
+  expect_equal(is.na(accuracy$AUC[1]), TRUE)
+  expect_equal(nrow(accuracy), 67)
+  #**# Can add additional district unit tests
 
   unlink(results.path, recursive = TRUE)
 })
@@ -598,16 +600,20 @@ test_that("NULL model produces the expected outputs for mosquitoes", {
   expect_equal(nrow(forecast.distributions), 27)
   expect_equal(ncol(forecast.distributions), 1006)
 
-  skip("Accuracy assessments temporarily disabled")
-  expect_equal(as.character(accuracy$model), "NULL.MODELS")
-  expect_equal(accuracy$forecast.target, "seasonal.mosquito.MLE")
-  expect_equal(round(accuracy$CRPS,5), 0.00013)
-  expect_equal(round(accuracy$RMSE, 5), 0.00013) #**# Why is RMSE the same as CRPS? CRPS should be absolute error, not RMSE. Is only one data point being evaluated?
-  expect_equal(round(accuracy$Scaled_RMSE, 3), 0.097)
-  expect_equal(accuracy$within_percentage, 1)
-  expect_equal(accuracy$within_threshold, 0)
-  expect_equal(accuracy$within_threshold_or_percentage, 1)
-  expect_equal(accuracy$AUC, NA)
+  # Confirm accuracy calculations worked correctly
+  expect_equal(as.character(accuracy$model[1]), "NULL.MODELS")
+  expect_equal(accuracy$forecast.target[1], "seasonal.mosquito.MLE")
+  expect_equal(round(accuracy$CRPS[1],5), 0.00071)
+  expect_equal(round(accuracy$RMSE[1], 5), 0.00006) #**# Why is RMSE the same as CRPS? CRPS should be absolute error, not RMSE. Is only one data point being evaluated?
+  expect_equal(round(accuracy$Scaled_RMSE[1], 3), 0.034)
+  expect_equal(accuracy$within_percentage[1], 1)
+  expect_equal(accuracy$within_threshold[1], 0)
+  expect_equal(accuracy$within_threshold_or_percentage[1], 1)
+  expect_equal(is.na(accuracy$AUC[1]), TRUE)
+  # NOTE: It was 27 above, but forecasts could be made for eight counties  due to presence of historical data
+  # However, accuracy could not be calculated as no observations were made in 2015
+  expect_equal(nrow(accuracy), 19)
+  #Can add additional tests for district results
 
   unlink(results.path, recursive = TRUE)
 })
@@ -654,7 +660,7 @@ test_that("RF1 model produces the expected outputs", {
   #expect_equal(other.results, NULL) #**# Do not currently care about this output.
 
   #skip('Do not do hind casts until forecasts work')
-  # Test ArboMAP hindcasts for human cases
+  # Test RF1_C hindcasts for human cases
   hindcasts = suppressWarnings(dfmip.hindcasts(c("annual.human.cases"), c("RF1_C"), c(2015), dfmip::human.data, dfmip::mosq.data,
                                                dfmip::weather.data, districtshapefile, results.path,
                                                model.inputs = list(rf1.inputs = dfmip::rf1.inputs),
@@ -667,12 +673,13 @@ test_that("RF1 model produces the expected outputs", {
   forecasts.df = hindcasts[[2]]
   forecast.distributions = hindcasts[[3]]
 
-  expect_equal(forecasts.df$MODEL.NAME[1], "RF1_C")
+  expect_equal(forecasts.df$model.name[1], "RF1_C")
   #expect_equal(forecasts.df$FORECAST.ID[2], "test:2015-07-12") #**# This produces a weird result. It gives NA, but is not equal to NA.
+  #**# FIX THIS
   expect_equal(nrow(forecasts.df), 1) # Replace test above to set a clear expectation that only one row will be produced (as it only creates forecasts for the first week, as all subsequent weeks will be the same. #**# We can consider having the behavior produce an estimate for each week, even though they are all equal)
   expect_equal(forecasts.df$UNIT[1], 'test')
-  expect_equal(forecasts.df$DATE[1], '2015-07-05')
-  expect_equal(forecasts.df$YEAR[1], 2015)
+  expect_equal(forecasts.df$date[1], '2015-07-05')
+  expect_equal(forecasts.df$year[1], 2015)
   expect_equal(round(forecasts.df$value[1], 1), 48.9)
   #expect_equal(forecasts.df$annual.human.cases[2], NULL) #**# Same issue with FORECAST.ID[2] above. It's a weird NA that isn't an NA.
 
@@ -712,6 +719,7 @@ test_that("hindcasts works for all supported forecast targets simultaneously", {
   results.path = "DFMIPTESTRESULTS/"
   dir.create(results.path)
 
+  set.seed(20200302) #Needed becasue the mosquito calculations use MLE methods
   # Test hindcasts for multiple forecast targets simultaneously
   hindcasts = suppressWarnings(dfmip.hindcasts(c('annual.human.cases', "seasonal.mosquito.MLE"), c("NULL.MODELS"), c(2015), human.data, mosq.data,
                                                weather.data, districtshapefile, results.path,
@@ -739,22 +747,24 @@ test_that("hindcasts works for all supported forecast targets simultaneously", {
   expect_equal(round(forecast.distributions[68,7], 4), 0.0015)
   expect_equal(round(forecast.distributions[1,7], 1), 88.7)
 
-  skip("Accuracy assessment temporarility disabled")
+  # Assess accuracy metrics
+  expect_equal(nrow(accuracy), 86) # Not 94 as above, as 8 counties had forecasts but were missing an observed for 2015
   expect_equal(as.character(accuracy$model[1]), "NULL.MODELS")
   expect_equal(accuracy$forecast.target[1], "annual.human.cases")
-  expect_equal(accuracy$forecast.target[2], "seasonal.mosquito.MLE")
+  expect_equal(accuracy$forecast.target[67], "annual.human.cases")
+  expect_equal(accuracy$forecast.target[68], "seasonal.mosquito.MLE")
   expect_equal(round(accuracy$CRPS[1],0), 25)
-  expect_equal(round(accuracy$CRPS[2],5), 0.00013)
+  expect_equal(round(accuracy$CRPS[68],5), 0.00012) # wonder why this changed from 0.00013? Assume due to MLE calculations
   expect_equal(round(accuracy$RMSE[1], 0), 25)
-  expect_equal(round(accuracy$RMSE[2], 5), 0.00013)
+  expect_equal(round(accuracy$RMSE[68], 5), 0.00012) #Formerly 0.00013
   expect_equal(round(accuracy$Scaled_RMSE[1], 3), 0.386)
-  expect_equal(round(accuracy$Scaled_RMSE[2], 3), 0.097)
+  expect_equal(round(accuracy$Scaled_RMSE[68], 3), 0.07) # changed from 0.097
   expect_equal(accuracy$within_percentage[1], 0)
-  expect_equal(accuracy$within_percentage[2], 1)
+  expect_equal(accuracy$within_percentage[68], 1)
   expect_equal(accuracy$within_threshold[1], 0)
-  expect_equal(accuracy$within_threshold[2], 0)
-  expect_equal(accuracy$within_threshold_or_percentage[2], 1)
-  expect_equal(accuracy$AUC[1], NA)
+  expect_equal(accuracy$within_threshold[68], 0)
+  expect_equal(accuracy$within_threshold_or_percentage[68], 1)
+  expect_equal(is.na(accuracy$AUC[1]), TRUE)
 
   unlink(results.path, recursive = TRUE)
 })

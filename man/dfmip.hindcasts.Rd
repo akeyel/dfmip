@@ -61,6 +61,9 @@ rf1.inputs \tab Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}.\
 
 \item{point.estimate}{Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.}
 }
+\value{
+Four objects #**# ADD DOCUMENTATION. Also consider a list to hold the 'other.outputs'
+}
 \description{
 Generate hindcasts for a suite of models using common data inputs, and evaluate their accuracy using a standardized suite of validation metrics
 }
