@@ -68,7 +68,6 @@ NULL
 #' @param mosq.data Data on mosquito pools tested for the disease. Must be formatted with 4 columns: district (the spatial unit, e.g. county), col_date: the date the mosquitoes were tested, wnv_result: whether or not the pool was positive, pool_size: the number of mosquitoes tested in the pool. A fifth column species is optional but is not used by the code
 #' @param weather.data Data on weather variables to be included in the analysis. See the read.weather.data function for details about data format.
 #' The read.weather.data function from ArboMAP is a useful way to process one or more data files downloaded via Google Earth Engine.
-#' @param districtshapefile The shapefile with polygons representing the districts. #**# Are there required fields?
 #' @param weekinquestion The focal week for the forecast. For the Random Forest model, this will be the last day used for making the forecast
 #' @param week.id A two-part ID for the analysis run to distinguish it from other weeks or runs. The first part is a character string, while the second part is a date in the format YYYY-MM-DD #**# analysis.id would be a better name, but would require changes to the code in multiple places
 #' @param results.path The base path in which to place the modeling results. Some models will create sub-folders for model specific results
@@ -78,6 +77,7 @@ NULL
 #' @param population.df Census information for calculating incidence. Can be set to 'none' or omitted from the function call #**# NEEDS FORMAT INSTRUCTIONS
 #' @param n.draws The number of draws for the forecast distributions. Should generally be 1 if a point estimate is used, otherwise should be a large enough number to adequately represent the variation in the underlying data
 #' @param point.estimate Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.
+#' @param is.test Default is FALSE (runs all models). If set to TRUE, saved results will be used for the Random Forest model. For testing purposes only.
 #'
 #' @return dfmip.outputs: List of three objects: \tabular{ll}{
 #' forecasts.df \tab A data frame with 7 columns: The model name, the forecast id, the forecast target, the geographic scope of the forecast
@@ -91,9 +91,10 @@ NULL
 #'
 #' @export dfmip.forecast
 dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data,
-                     weather.data, districtshapefile, weekinquestion, week.id,
+                     weather.data, weekinquestion, week.id,
                      results.path, model.inputs = list(),
-                     population.df = 'none', n.draws = 1000, point.estimate = 0){
+                     population.df = 'none', n.draws = 1000, point.estimate = 0,
+                     is.test = FALSE){
 
   # Check that models to run are all valid model names
   models.in.dfmip = c("NULL.MODELS", "ArboMAP", "ArboMAP.MOD", "RF1_C", "RF1_A")
@@ -156,6 +157,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     var2name = arbo.inputs$var2name
     compyear1 = arbo.inputs$compyear1
     compyear2 = arbo.inputs$compyear2
+    districtshapefile = arbo.inputs$districtshapefile
     weathersummaryfile = NA
 
     #stop("GOT HERE")
@@ -203,6 +205,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     var2name = arbo.inputs$var2name
     compyear1 = arbo.inputs$compyear1
     compyear2 = arbo.inputs$compyear2
+    districtshapefile = arbo.inputs$districtshapefile
     weathersummaryfile = NA
 
     # [[1]] is necessary to get just the results. [[2]] returns the inputs, and is for compatibility with the .Rmd format in which ArboMAP was initially developed
@@ -245,33 +248,30 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     rf1.inputs.no.extras[[1]] = NA
     rf1.inputs.no.extras[[2]] = NA
 
-    RF1.out = rf1::rf1(human.data, mosq.data, districtshapefile, weather.data,
-                      weekinquestion, rf1.inputs.no.extras, rf1.results.path)
+    RF1.out = rf1::rf1(forecast.targets, human.data, mosq.data, weather.data,
+                      weekinquestion, rf1.inputs.no.extras, rf1.results.path, UNIT,
+                      use.testing.objects = is.test, n.draws = n.draws)
 
     RF1.results = RF1.out[[1]]
     RF1.forecast.distributions = RF1.out[[2]]
+    RF1.bins = RF1.out[[3]]
+    other.outputs$rf1c = RF1.out[[4]]
 
+    # Update Results and Distribution objects with output from the Random Forest model (both forecast targets come out merged)
     RF1.model.name = "RF1_C"
-    RF1.forecast.id = sprintf("%s:%s-STATEWIDE", week.id, UNIT)
-    other.outputs$rf1c = RF1.results$other.results
+    RF1.forecast.id = sprintf("%s:%s", week.id, RF1.results$district)
+    RF1.records = data.frame(model.name = RF1.model.name, forecast.id = RF1.forecast.id,
+                             forecast.target = RF1.results$forecast.target,
+                             UNIT = UNIT, date = date, year = year, value = RF1.results$value)
 
-    if ('annual.human.cases' %in% forecast.targets){
-      RF1.record = c(RF1.model.name, RF1.forecast.id, 'annual.human.cases', UNIT, date, year, RF1.results$annual.human.cases)
-      forecasts.df = update.df2(forecasts.df, RF1.record)
+    forecasts.df = update.df2(forecasts.df, RF1.records)
 
-      RF1.distribution.record = c(RF1.model.name, RF1.forecast.id, 'annual.human.cases', UNIT, date, year, as.matrix(RF1.forecast.distributions$annual.human.cases, nrow = 1))
-      forecast.distributions = update.distribution2(forecast.distributions, RF1.distribution.record)
-      #forecast.distributions = update.distribution(forecast.targets, RF1.results$model.name, RF1.results$forecast.id, forecast.distributions, RF1.forecast.distributions)
-    }
-
-    if ('seasonal.mosquito.MLE' %in% forecast.targets){
-      RF1.record = c(RF1.model.name, RF1.forecast.id, 'seasonal.mosquito.MLE', UNIT, date, year, RF1.results$seasonal.mosquito.MLE)
-      forecasts.df = update.df2(forecasts.df, RF1.record)
-
-      RF1.distribution.record = c(RF1.model.name, RF1.forecast.id, 'seasonal.mosquito.MLE', UNIT, date, year, as.matrix(RF1.forecast.distributions$seasonal.mosquito.MLE, nrow = 1))
-      forecast.distributions = update.distribution2(forecast.distributions, RF1.distribution.record)
-      #forecast.distributions = update.distribution(forecast.targets, RF1.results$model.name, RF1.results$forecast.id, forecast.distributions, RF1.forecast.distributions)
-    }
+    RF1.distribution.records = data.frame(model.name = RF1.model.name, forecast.id = RF1.forecast.id,
+                                          forecast.target = RF1.forecast.distributions$forecast.target,
+                                          UNIT = UNIT, date = date, year = year)
+    # Add data columns to the new data frame
+    RF1.distribution.records = cbind(RF1.distribution.records, RF1.forecast.distributions[ ,3:(n.draws + 2)])
+    forecast.distributions = update.distribution2(forecast.distributions, RF1.distribution.records)
   }
 
   # Run the Random Forest 1 model with all available inputs
@@ -284,42 +284,36 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     if(!requireNamespace('rf1')){
       stop('rf1 package must be installed. You can do this with devtools::install_github("akeyel/rf1")')
     }
-
-    # Check that rf1.inputs match with forecast.targets
     rf1.inputs = model.inputs[["rf1.inputs"]]
-    rf1.inputs = check.inputs.targets(rf1.inputs, forecast.targets)
 
     # Set up the sub-model output results
     rf1.results.path = sprintf("%s/rf1_results", results.path)
     if (!file.exists(rf1.results.path)){ dir.create((rf1.results.path))  }
 
-    RF1.out = rf1::rf1(human.data, mosq.data, districtshapefile, weather.data,
-                      weekinquestion, rf1.inputs, rf1.results.path)
+    RF1.out = rf1::rf1(forecast.targets, human.data, mosq.data, weather.data,
+                      weekinquestion, rf1.inputs, rf1.results.path, UNIT,
+                      use.testing.objects = is.test, n.draws = n.draws)
 
     RF1.results = RF1.out[[1]]
     RF1.forecast.distributions = RF1.out[[2]]
+    RF1.bins = RF1.out[[3]]
+    other.outputs$rf1c = RF1.out[[4]]
 
+    # Update Results and Distribution objects with output from the Random Forest model (both forecast targets come out merged)
     RF1.model.name = "RF1_A"
-    RF1.forecast.id = sprintf("%s:%s-STATEWIDE", week.id, UNIT)
-    other.outputs$rf1a = RF1.results$other.results
+    RF1.forecast.id = sprintf("%s:%s", week.id, RF1.results$district)
+    RF1.records = data.frame(model.name = RF1.model.name, forecast.id = RF1.forecast.id,
+                             forecast.target = RF1.results$forecast.target,
+                             UNIT = UNIT, date = date, year = year, value = RF1.results$value)
 
-    if ('annual.human.cases' %in% forecast.targets){
-      RF1.record = c(RF1.model.name, RF1.forecast.id, 'annual.human.cases', UNIT, date, year, RF1.results$annual.human.cases)
-      forecasts.df = update.df2(forecasts.df, RF1.record)
+    forecasts.df = update.df2(forecasts.df, RF1.records)
 
-      RF1.distribution.record = c(RF1.model.name, RF1.forecast.id, 'annual.human.cases', UNIT, date, year, as.matrix(RF1.forecast.distributions$annual.human.cases, nrow = 1))
-      forecast.distributions = update.distribution2(forecast.distributions, RF1.distribution.record)
-      #forecast.distributions = update.distribution(forecast.targets, RF1.results$model.name, RF1.results$forecast.id, forecast.distributions, RF1.forecast.distributions)
-    }
-
-    if ('seasonal.mosquito.MLE' %in% forecast.targets){
-      RF1.record = c(RF1.model.name, RF1.forecast.id, 'seasonal.mosquito.MLE', UNIT, date, year, RF1.results$seasonal.mosquito.MLE)
-      forecasts.df = update.df2(forecasts.df, RF1.record)
-
-      RF1.distribution.record = c(RF1.model.name, RF1.forecast.id, 'seasonal.mosquito.MLE', UNIT, date, year, as.matrix(RF1.forecast.distributions$seasonal.mosquito.MLE, nrow = 1))
-      forecast.distributions = update.distribution2(forecast.distributions, RF1.distribution.record)
-      #forecast.distributions = update.distribution(forecast.targets, RF1.results$model.name, RF1.results$forecast.id, forecast.distributions, RF1.forecast.distributions)
-    }
+    RF1.distribution.records = data.frame(model.name = RF1.model.name, forecast.id = RF1.forecast.id,
+                                          forecast.target = RF1.forecast.distributions$forecast.target,
+                                          UNIT = UNIT, date = date, year = year)
+    # Add data columns to the new data frame
+    RF1.distribution.records = cbind(RF1.distribution.records, RF1.forecast.distributions[ ,3:(n.draws + 2)])
+    forecast.distributions = update.distribution2(forecast.distributions, RF1.distribution.records)
   }
 
   # Make sure forecasts.targets are not converted to factor
@@ -330,43 +324,37 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
 #' rf1.inputs
 #'
-#' The model-specific inputs required to run the RF1 model
+#' The model-specific inputs required to run the RF1 model: \tabular{ll}{
 #'
-#' @param files.to.add A vector of file names of other data sources to be
+#' files.to.add\tab A vector of file names of other data sources to be
 #' included in the Random Forest model. If no additional data is to be added,
-#' this should be an empty vector (i.e. c()) or NA.
-#' @param merge.type.vec A vector identifying how the files should be joined to
+#' this should be an empty vector (i.e. c()) or NA.\cr
+#'merge.type.vec\tab A vector identifying how the files should be joined to
 #' the mosquito and human data. Options are spatial_temporal where merges will
 #' be performed on county and year (e.g., climate data); state_temporal where
 #' merges will be performed on state and year (e.g. BBS data at state level),
 #' and spatial, where merges will be performed on county only (e.g., landcover
 #' and census data). This must have the same length as files.to.add, and if no
-#' additional data is to be added, this should be an empty vector (i.e. c()) or NA.
-#' @param analysis.counties A list of counties included in the analysis (this
+#' additional data is to be added, this should be an empty vector (i.e. c()) or NA.\cr
+#' analysis.counties\tab A list of counties included in the analysis (this
 #' is for ensuring that a county and year that does not have a human case is
-#' treated as a 0)
-#' @param analysis.years A list of years included in the analysis (this is for
+#' treated as a 0)\cr
+#' analysis.years\tab A list of years included in the analysis (this is for
 #' ensuring that a county and year that does not have a human case is treated
 #' as a 0 rather than as missing) #**# This is problematic if a specific county
-#' or year is missing.
-#' @param user.drop.vars A list of independent variables that should be
+#' or year is missing.\cr
+#' user.drop.vars\tab A list of independent variables that should be
 #' excluded from the analysis. If no variables should be excluded, this should
-#' be an empty vector c() or NA.
-#' @param mosq.model The Random Forest model to use for forecasting mosquito
+#' be an empty vector c() or NA.\cr
+#' mosq.model\tab The Random Forest model to use for forecasting mosquito
 #' infection rates. If this is to be fitted from the empirical data, this
-#' should be set to NA
-#' @param human.model The Random Forest model to use for forecasting human
+#' should be set to NA\cr
+#' human.model\tab The Random Forest model to use for forecasting human
 #' cases. If this is to be fitted from the empirical data, this should be set
-#' to NA.
-#' @param analyze.mosquitoes Whether (1) or not (0) results should be produced
-#' for mosquitoes. These will only be in the other.results$rf1 object and
-#' will not affect the forecast.df object
-#' @param analyze.humans Whether (analyze.humans set to 1) or not (set to 0)
-#' results for the human analysis should be produced. If set to 0, the
-#'forecast.df object will return only NA's
-#' @param no.data.exceptions #**# COMING SOON A list of county-years within the
+#' to NA.\cr
+#' no.data.exceptions\taba #**# COMING SOON A list of county-years within the
 #' range of analysis.years and analysis.counties that are missing data rather
-#' than 0's
+#' than 0's\cr}
 #'
 #' @name rf1.inputs
 NULL
@@ -422,7 +410,6 @@ NULL
 #' @param mosq.data Data on mosquito pools tested for the disease. Must be formatted with 4 columns: district (the spatial unit, e.g. county), col_date: the date the mosquitoes were tested, wnv_result: whether or not the pool was positive, pool_size: the number of mosquitoes tested in the pool. A fifth column species is optional but is not used by the code
 #' @param weather.data Data on weather variables to be included in the analysis. See the read.weather.data function for details about data format.
 #' The read.weather.data function from ArboMAP is a useful way to process one or more data files downloaded via Google Earth Engine.
-#' @param districtshapefile The shapefile with polygons representing the districts. #**# Are there required fields?
 #' @param results.path The base path in which to place the modeling results. Some models will create sub-folders for model specific results
 #' @param model.inputs A keyed list of model-specific inputs. Keyed entry options are: \tabular{ll}{
 #' arbo.inputs \tab Inputs specific to the ArboMAP model. #**# DOCUMENTATION NEEDED\cr
@@ -436,15 +423,16 @@ NULL
 #' @param sample_frequency How frequently sample (default, 1 = weekly) #**# Other options are not currently supported
 #' @param n.draws The number of draws for the forecast distributions. Should generally be 1 if a point estimate is used, otherwise should be a large enough number to adequately represent the variation in the underlying data
 #' @param point.estimate Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.
-#'
+#' @param is.test Default is 0 (runs all models). If set to 1, saved results will be used for the Random Forest model. For testing purposes only.
+
 #' @return Four objects #**# ADD DOCUMENTATION. Also consider a list to hold the 'other.outputs'
 #'
 #' @export dfmip.hindcasts
 dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.data, mosq.data,
-                           weather.data, districtshapefile, results.path, model.inputs = list(),
+                           weather.data, results.path, model.inputs = list(),
                            population.df = 'none', threshold = 'default', percentage = 'default',
                            id.string = "", season_start_month = 7, weeks_in_season = 2, sample_frequency = 1,
-                           n.draws = 1000, point.estimate = 0){
+                           n.draws = 1000, point.estimate = 0, is.test = FALSE){
 
   # Indicator to denote the first time through the loop
   first = 1
@@ -545,8 +533,9 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
         }
 
         out = dfmip.forecast(forecast.targets, actual.models.to.run, human.data.subset, mosq.data.subset, weather.data.subset,
-                             districtshapefile, weekinquestion, week.id, results.path,
-                             model.inputs, population.df, n.draws = n.draws, point.estimate = point.estimate)
+                             weekinquestion, week.id, results.path,
+                             model.inputs, population.df, n.draws = n.draws, point.estimate = point.estimate,
+                             is.test = is.test)
         out.forecasts = out[[1]]
         out.distributions = out[[2]]
 
@@ -1809,64 +1798,6 @@ check.models.and.targets = function(models.to.run, forecast.targets){
 
 }
 
-
-
-#' Check that rf1.inputs match with forecast.targets
-#'
-#' Will give a warning and adjust rf1.inputs if there is a mismatch
-#' #**# Consider if the human or mosquito analyses apply to other forecast targets
-#'
-#' @param rf1.inputs See \code{\link{rf1.inputs}}
-#' @param forecast.targets See \code{\link{dfmip.forecast}}
-#' @param An indicator for whether warnings should be issued (used to turn off warnings in testing)
-#'
-#' @return rf1.inputs A possibly modified rf1.inputs object based on any mismatches detected during the checks
-#' @noRd
-#'
-check.inputs.targets = function(rf1.inputs, forecast.targets, warnings = TRUE){
-
-  # Check that the analyze.mosquitoes setting is consistent with forecast.targets. If not, override it with a warning
-  analyze.mosquitoes = rf1.inputs[[8]]
-  if (analyze.mosquitoes == 1){
-    if (!'seasonal.mosquito.MLE' %in% forecast.targets){
-      if (warnings == TRUE){
-        warning("Mosquito analysis set to run, but seasonal mosquito MLE was not a forecasting target. The mosquito analysis will not be run.")
-      }
-      rf1.inputs[[8]] = 0
-    }
-  }
-
-  if (analyze.mosquitoes == 0){
-    if ('seasonal.mosquito.MLE' %in% forecast.targets){
-      if (warnings == TRUE){
-        warning("Mosquito analysis was set NOT to run, but mosquito output was desired. The mosquito analysis WILL be run.")
-      }
-      rf1.inputs[[8]] = 1
-    }
-  }
-
-  # Check that analzye.humans setting is consistent with forecast.targets
-  analyze.humans = rf1.inputs[[9]]
-  if (analyze.humans == 1){
-    if (!"annual.human.cases" %in% forecast.targets){
-      if (warnings == TRUE){
-        warning("Human analysis set to run, but annual.human.cases not in forecasting targets. The human analysis will NOT be run.")
-      }
-      rf1.inputs[[9]] = 0
-    }
-  }
-
-  if (analyze.humans == 0){
-    if ("annual.human.cases" %in% forecast.targets){
-      if (warnings == TRUE){
-        warning("Human analysis was not set to run, but annual.human.cases was included in forecasting targets. The human analysis WILL be run.")
-      }
-      rf1.inputs[[9]] = 1
-    }
-  }
-
-  return(rf1.inputs)
-}
 
 
 #' Calculate statewide MLE null model

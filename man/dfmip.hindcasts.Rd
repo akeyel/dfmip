@@ -5,11 +5,11 @@
 \title{DFMIP Hindcasts}
 \usage{
 dfmip.hindcasts(forecast.targets, models.to.run, focal.years, human.data,
-  mosq.data, weather.data, districtshapefile, results.path,
-  model.inputs = list(), population.df = "none",
-  threshold = "default", percentage = "default", id.string = "",
-  season_start_month = 7, weeks_in_season = 2, sample_frequency = 1,
-  n.draws = 1000, point.estimate = 0)
+  mosq.data, weather.data, results.path, model.inputs = list(),
+  population.df = "none", threshold = "default",
+  percentage = "default", id.string = "", season_start_month = 7,
+  weeks_in_season = 2, sample_frequency = 1, n.draws = 1000,
+  point.estimate = 0, is.test = FALSE)
 }
 \arguments{
 \item{forecast.targets}{The quantities for which hindcasts are to be made. Options are: \tabular{ll}{
@@ -35,8 +35,6 @@ regardless of the order specified in the models.to.run vector.}
 \item{weather.data}{Data on weather variables to be included in the analysis. See the read.weather.data function for details about data format.
 The read.weather.data function from ArboMAP is a useful way to process one or more data files downloaded via Google Earth Engine.}
 
-\item{districtshapefile}{The shapefile with polygons representing the districts. #**# Are there required fields?}
-
 \item{results.path}{The base path in which to place the modeling results. Some models will create sub-folders for model specific results}
 
 \item{model.inputs}{A keyed list of model-specific inputs. Keyed entry options are: \tabular{ll}{
@@ -60,6 +58,8 @@ rf1.inputs \tab Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}.\
 \item{n.draws}{The number of draws for the forecast distributions. Should generally be 1 if a point estimate is used, otherwise should be a large enough number to adequately represent the variation in the underlying data}
 
 \item{point.estimate}{Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.}
+
+\item{is.test}{Default is 0 (runs all models). If set to 1, saved results will be used for the Random Forest model. For testing purposes only.}
 }
 \value{
 Four objects #**# ADD DOCUMENTATION. Also consider a list to hold the 'other.outputs'

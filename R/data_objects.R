@@ -1,14 +1,3 @@
-# #' dfmip_example_inputs
-# #'
-# #' Data documentation forthcoming
-# #'
-# #' @docType data
-# #'
-# #' @usage data(dfmip_example_inputs)
-# #'
-# #' @source \url{https://www.github.com/Ecograph/ArboMAP/}
-# "dfmip_example_inputs"
-
 #' Weather Data
 #'
 #' Data from GridMET for South Dakota
@@ -33,3 +22,11 @@
 #' @docType data
 #' @source \url{https://www.github.com/Ecograph/ArboMAP/}
 "mosq.data"
+
+#' Random Forest Inputs
+#'
+#' Example inputs to facilitate running the random forest example
+#'
+#' @docType data
+#'
+'rf1.inputs'
