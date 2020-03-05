@@ -5,9 +5,9 @@
 \title{Disease Forecast Model Intercomparison Project (dfmip) Forecast}
 \usage{
 dfmip.forecast(forecast.targets, models.to.run, human.data, mosq.data,
-  weather.data, districtshapefile, weekinquestion, week.id, results.path,
+  weather.data, weekinquestion, week.id, results.path,
   model.inputs = list(), population.df = "none", n.draws = 1000,
-  point.estimate = 0)
+  point.estimate = 0, is.test = FALSE)
 }
 \arguments{
 \item{forecast.targets}{The quantities for which hindcasts are to be made. Options are: \tabular{ll}{
@@ -31,8 +31,6 @@ regardless of the order specified in the models.to.run vector.}
 \item{weather.data}{Data on weather variables to be included in the analysis. See the read.weather.data function for details about data format.
 The read.weather.data function from ArboMAP is a useful way to process one or more data files downloaded via Google Earth Engine.}
 
-\item{districtshapefile}{The shapefile with polygons representing the districts. #**# Are there required fields?}
-
 \item{weekinquestion}{The focal week for the forecast. For the Random Forest model, this will be the last day used for making the forecast}
 
 \item{week.id}{A two-part ID for the analysis run to distinguish it from other weeks or runs. The first part is a character string, while the second part is a date in the format YYYY-MM-DD #**# analysis.id would be a better name, but would require changes to the code in multiple places}
@@ -48,6 +46,8 @@ rf1.inputs \tab Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}.\
 \item{n.draws}{The number of draws for the forecast distributions. Should generally be 1 if a point estimate is used, otherwise should be a large enough number to adequately represent the variation in the underlying data}
 
 \item{point.estimate}{Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.}
+
+\item{is.test}{Default is FALSE (runs all models). If set to TRUE, saved results will be used for the Random Forest model. For testing purposes only.}
 }
 \value{
 dfmip.outputs: List of three objects: \tabular{ll}{

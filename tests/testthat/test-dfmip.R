@@ -319,29 +319,6 @@ test_that("assorted small functions all work as expected", {
   expect_equal(check.models.and.targets(c("RF1_C", "RF1_A", "NULL.MODELS"), c('annual.human.cases', 'seasonal.mosquito.MLE')), NULL)
   expect_message(check.models.and.targets(c("ArboMAP"), c('annual.human.cases', 'seasonal.mosquito.MLE')), "^seasonal.mosquito.MLE not supported for ArboMAP. Estimates will not be produced for this model")
 
-  # Check inputs/targets function
-  rf1.inputs = list(NA, NA, NA, NA, NA, NA, NA, 0, 0)
-  forecast.targets = c('annual.human.cases', 'seasonal.mosquito.MLE')
-  rf1.inputs = check.inputs.targets(rf1.inputs, forecast.targets, warnings = FALSE)
-  expect_equal(rf1.inputs[[8]], 1)
-  expect_equal(rf1.inputs[[9]], 1)
-
-  rf1.inputs = list(NA, NA, NA, NA, NA, NA, NA, 1, 1)
-  forecast.targets = c('annual.human.cases', 'seasonal.mosquito.MLE')
-  rf1.inputs = check.inputs.targets(rf1.inputs, forecast.targets, warnings = FALSE)
-  expect_equal(rf1.inputs[[8]], 1)
-  expect_equal(rf1.inputs[[9]], 1)
-
-  rf1.inputs = list(NA, NA, NA, NA, NA, NA, NA, 1, 1)
-  forecast.targets = c("Not a real entry")
-  rf1.inputs = check.inputs.targets(rf1.inputs, forecast.targets, warnings = FALSE)
-  expect_equal(rf1.inputs[[8]], 0)
-  expect_equal(rf1.inputs[[9]], 0)
-
-  # Test warning message
-  expect_warning(check.inputs.targets(list(NA,NA,NA,NA,NA,NA,NA,0,0), c('annual.human.cases')), "Human analysis was not set to run, but annual.human.cases was included in forecasting targets. The human analysis WILL be run.")
-
-
 })
 
 # Should be in rf1 package tests, but done here because then only one copy of the example data is needed.
@@ -391,7 +368,7 @@ test_that("ArboMAP model produces the expected outputs", {
   }
 
   # Load example data to run the models (back out two directories to get into main package directory)
-  load("dfmip_example_inputs.RData")
+  #load("dfmip_example_inputs.RData")
   #load("../../vignettes/dfmip_example_inputs.RData")
 
   # Create a temporary results path
@@ -400,7 +377,7 @@ test_that("ArboMAP model produces the expected outputs", {
 
   # Test ArboMAP Model for human cases
   dfmip.outputs = suppressWarnings(dfmip.forecast(c("annual.human.cases"), c("ArboMAP"), human.data, mosq.data, weather.data,
-                                 districtshapefile, weekinquestion, week.id, results.path,
+                                weekinquestion, week.id, results.path,
                                  model.inputs = list(arbo.inputs = arbo.inputs), population.df = NA))
 
   forecasts.df = dfmip.outputs[[1]]
@@ -416,7 +393,7 @@ test_that("ArboMAP model produces the expected outputs", {
   #skip('Do not do hind casts until forecasts work')
   # Test ArboMAP hindcasts for human cases
   hindcasts = suppressWarnings(dfmip.hindcasts(c("annual.human.cases"), c("ArboMAP"), c(2015), human.data, mosq.data,
-                              weather.data, districtshapefile, results.path,
+                              weather.data, results.path,
                               model.inputs = list(arbo.inputs = arbo.inputs),
                               population.df = NA,
                               threshold = 1, percentage = 0.25, id.string = "test",
@@ -464,7 +441,6 @@ test_that("NULL model produces the expected outputs", {
   #load("dfmip_example_inputs.RData")
   #load("../../vignettes/dfmip_example_inputs.RData")
 
-  districtshapefile = NA
   weekinquestion = as.Date("2018-08-15", "%Y-%m-%d") #**# Is the as.Date part necessary?
   week.id = sprintf("test:%s", weekinquestion)
   # Create a temporary results path
@@ -476,7 +452,7 @@ test_that("NULL model produces the expected outputs", {
 
   # Test Null Model for human cases
   dfmip.outputs = suppressWarnings(dfmip.forecast(c("annual.human.cases"), c("NULL.MODELS"), dfmip::human.data, dfmip::mosq.data, dfmip::weather.data,
-                                                  districtshapefile, weekinquestion, week.id, results.path,
+                                                  weekinquestion, week.id, results.path,
                                                   model.inputs = list(), population.df = NA))
 
   forecasts.df = dfmip.outputs[[1]]
@@ -492,7 +468,7 @@ test_that("NULL model produces the expected outputs", {
   #skip('Do not do hind casts until forecasts work')
   # Test ArboMAP hindcasts for human cases
   hindcasts = suppressWarnings(dfmip.hindcasts(c("annual.human.cases"), c("NULL.MODELS"), c(2015), human.data, mosq.data,
-                                               weather.data, districtshapefile, results.path, model.inputs = NA,
+                                               weather.data, results.path, model.inputs = NA,
                                                population.df = NA,
                                                threshold = 1, percentage = 0.25, id.string = "test",
                                                season_start_month = 7, weeks_in_season = 2))
@@ -543,7 +519,6 @@ test_that("NULL model produces the expected outputs for mosquitoes", {
   # Load example data to run the models (back out two directories to get into main package directory)
   weekinquestion = as.Date("2018-08-15", "%Y-%m-%d") #**# Is the as.Date part necessary?
   week.id = sprintf("test:%s", weekinquestion)
-  districtshapefile = NA
 
   #load("dfmip_example_inputs.RData")
   #load("../../vignettes/dfmip_example_inputs.RData")
@@ -556,7 +531,7 @@ test_that("NULL model produces the expected outputs for mosquitoes", {
 
   # Test Null Model for mosquito MLE
   dfmip.outputs = suppressWarnings(dfmip.forecast(c("seasonal.mosquito.MLE"), c("NULL.MODELS"), dfmip::human.data, dfmip::mosq.data, dfmip::weather.data,
-                                                  districtshapefile, weekinquestion, week.id, results.path,
+                                                  weekinquestion, week.id, results.path,
                                                   model.inputs = list(), population.df = NA))
 
   forecasts.df = dfmip.outputs[[1]]
@@ -579,7 +554,7 @@ test_that("NULL model produces the expected outputs for mosquitoes", {
 
   #skip('Do not do hind casts until forecasts work')
   hindcasts = suppressWarnings(dfmip.hindcasts(c("seasonal.mosquito.MLE"), c("NULL.MODELS"), c(2015), dfmip::human.data, dfmip::mosq.data,
-                                               dfmip::weather.data, districtshapefile, results.path, model.inputs = list(),
+                                               dfmip::weather.data, results.path, model.inputs = list(),
                                                population.df = NA,
                                                threshold = 1, percentage = 0.25, id.string = "test",
                                                season_start_month = 7, weeks_in_season = 1))
@@ -619,84 +594,147 @@ test_that("NULL model produces the expected outputs for mosquitoes", {
 })
 
 
-test_that("RF1 model produces the expected outputs", {
+test_that("DFMIP interfaces properly with the RF1 model", {
 
-  skip("RF1 model still needs to be upgraded to new forecasts.df and forecast.distributions framework")
+  # No longer necessary - code has been sped up using pre-run model results. This test just checks that dfmip
+  # pulls the package and output correctly. The actual tests of the random forest model are in the rf1 package.
+  #if (Test_All == 0){
+  #  skip_on_os('windows')
+  #  #skip("Skipped RF1 model tests to save time") #**# Enable when testing code other than the main functions
+  #}
 
-  if (Test_All == 0){
-    skip_on_os('windows')
-    #skip("Skipped RF1 model tests to save time") #**# Enable when testing code other than the main functions
-  }
-
-  # Load example data to run the models (back out two directories to get into main package directory)
-  #load("dfmip_example_inputs.RData")
-  #load("../../vignettes/dfmip_example_inputs.RData")
+  set.seed('20200305')
 
   # Set up inputs
-  weekinquestion = as.Date("2018-08-15", "%Y-%m-%d") #**# Is the as.Date part necessary?
+  weekinquestion = as.Date("2015-08-15", "%Y-%m-%d") #**# Is the as.Date part necessary?
+
   week.id = sprintf("test:%s", weekinquestion)
-  districtshapefile = NA
+  test.inputs = dfmip::rf1.inputs
+  test.inputs[[3]] = c('district1', 'district2', 'district3', 'district4')
+  test.inputs[[4]] = seq(2011, 2015)
 
   # Create a temporary results path
   results.path = "DFMIPTESTRESULTS/"
   dir.create(results.path)
 
-  # Test RF1 Model for human cases
-  dfmip.outputs = suppressWarnings(dfmip.forecast(c("annual.human.cases"), c("RF1_C"), dfmip::human.data, dfmip::mosq.data,
-                                                  dfmip::weather.data,
-                                                  districtshapefile, weekinquestion, week.id, results.path,
-                                                  model.inputs = list(rf1.inputs = dfmip::rf1.inputs), population.df = NA,
-                                                  point.estimate = 1, n.draws = 1))
+  ### Test RF1 Model for human cases
+  dfmip.outputs = suppressWarnings(dfmip.forecast(c("annual.human.cases"), c("RF1_C"), rf1::human.data, rf1::mosq.data,
+                                                  rf1::weather.data,
+                                                  weekinquestion, week.id, results.path,
+                                                  model.inputs = list(rf1.inputs = test.inputs), population.df = NA,
+                                                  point.estimate = 0, n.draws = 1000, is.test = TRUE))
 
   forecasts.df = dfmip.outputs[[1]]
   forecast.distributions = dfmip.outputs[[2]]
   other.results = dfmip.outputs[[3]]
 
   # Test forecasts.df object
-  expect_equal(round(forecasts.df$value[1], 0), 41)
+  expect_equal(forecasts.df$value[1], 1)
+  expect_equal(forecasts.df$value[5], 3)
 
   # Test distributions object
-  expect_equal(round(forecast.distributions[1,7], 0), 41)
+  expect_equal(round(forecast.distributions[1,7], 0), 1)
+  #expect_equal(other.results, NULL) #**# Do not currently care about this output.
+
+
+  ### Test RF1 Model for mosquito infection rates
+  dfmip.outputs = suppressWarnings(dfmip.forecast(c("seasonal.mosquito.MLE"), c("RF1_C"), rf1::human.data, rf1::mosq.data,
+                                                  rf1::weather.data,
+                                                  weekinquestion, week.id, results.path,
+                                                  model.inputs = list(rf1.inputs = test.inputs), population.df = NA,
+                                                  point.estimate = 0, n.draws = 1000, is.test = TRUE))
+
+  forecasts.df = dfmip.outputs[[1]]
+  forecast.distributions = dfmip.outputs[[2]]
+  other.results = dfmip.outputs[[3]]
+
+  # Test forecasts.df object
+  expect_equal(round(forecasts.df$value[1], 3), 0.014)
+  expect_equal(round(forecasts.df$value[5], 3), 0.007)
+
+  # Test distributions object
+  expect_equal(round(forecast.distributions[1,7], 3), 0.014)
+  #expect_equal(other.results, NULL) #**# Do not currently care about this output.
+
+  # Test RF1_A Model for human and mosquito cases
+  dfmip.outputs = suppressWarnings(dfmip.forecast(c("annual.human.cases", 'seasonal.mosquito.MLE'), c("RF1_A"), rf1::human.data, rf1::mosq.data,
+                                                  rf1::weather.data,
+                                                  weekinquestion, week.id, results.path,
+                                                  model.inputs = list(rf1.inputs = test.inputs), population.df = NA,
+                                                  point.estimate = 0, n.draws = 1000, is.test = TRUE))
+
+  forecasts.df = dfmip.outputs[[1]]
+  forecast.distributions = dfmip.outputs[[2]]
+  other.results = dfmip.outputs[[3]]
+
+  # Test forecasts.df object
+  expect_equal(nrow(forecasts.df), 10)
+  expect_equal(round(forecasts.df$value[1], 3), 0.014)
+  expect_equal(forecasts.df$value[10], 3)
+
+  # Test distributions object
+  expect_equal(nrow(forecast.distributions), 10)
+  expect_equal(ncol(forecast.distributions), 1006)
+  expect_equal(round(forecast.distributions[9,7], 0), 1)
   #expect_equal(other.results, NULL) #**# Do not currently care about this output.
 
   #skip('Do not do hind casts until forecasts work')
   # Test RF1_C hindcasts for human cases
-  hindcasts = suppressWarnings(dfmip.hindcasts(c("annual.human.cases"), c("RF1_C"), c(2015), dfmip::human.data, dfmip::mosq.data,
-                                               dfmip::weather.data, districtshapefile, results.path,
-                                               model.inputs = list(rf1.inputs = dfmip::rf1.inputs),
+  hindcasts = suppressWarnings(dfmip.hindcasts(c("annual.human.cases"), c("RF1_C"), c(2015), rf1::human.data, rf1::mosq.data,
+                                               rf1::weather.data, results.path,
+                                               model.inputs = list(rf1.inputs = test.inputs),
                                                population.df = NA,
                                                threshold = 1, percentage = 0.25, id.string = "test",
-                                               season_start_month = 7, weeks_in_season = 2,
-                                               n.draws = 1, point.estimate = 1))
+                                               season_start_month = 8, weeks_in_season = 2,
+                                               n.draws = 1000, point.estimate = 0, is.test = TRUE))
 
   accuracy = hindcasts[[1]]
   forecasts.df = hindcasts[[2]]
   forecast.distributions = hindcasts[[3]]
 
   expect_equal(forecasts.df$model.name[1], "RF1_C")
-  #expect_equal(forecasts.df$FORECAST.ID[2], "test:2015-07-12") #**# This produces a weird result. It gives NA, but is not equal to NA.
-  #**# FIX THIS
-  expect_equal(nrow(forecasts.df), 1) # Replace test above to set a clear expectation that only one row will be produced (as it only creates forecasts for the first week, as all subsequent weeks will be the same. #**# We can consider having the behavior produce an estimate for each week, even though they are all equal)
+  expect_equal(nrow(forecasts.df), 5) # Replace test above to set a clear expectation that only one row will be produced (as it only creates forecasts for the first week, as all subsequent weeks will be the same. #**# We can consider having the behavior produce an estimate for each week, even though they are all equal)
   expect_equal(forecasts.df$UNIT[1], 'test')
-  expect_equal(forecasts.df$date[1], '2015-07-05')
+  expect_equal(forecasts.df$date[1], '2015-08-02')
   expect_equal(forecasts.df$year[1], 2015)
-  expect_equal(round(forecasts.df$value[1], 1), 48.9)
-  #expect_equal(forecasts.df$annual.human.cases[2], NULL) #**# Same issue with FORECAST.ID[2] above. It's a weird NA that isn't an NA.
+  expect_equal(round(forecasts.df$value[1], 1), 1)
+  expect_equal(round(forecast.distributions[1,7], 1), 1)
+  expect_equal(nrow(forecast.distributions), 5)
+  expect_equal(ncol(forecast.distributions), 1006)
 
-  expect_equal(round(forecast.distributions[1,7], 1), 48.9)
-  expect_equal(nrow(forecast.distributions), 27)
-  expect_equal(ncol(forecast.distributions), 7)
+  # Test accuracy
+  expect_equal(as.character(accuracy$model[1]), "RF1_C")
+  expect_equal(accuracy$forecast.target[5], "annual.human.cases")
+  expect_equal(round(accuracy$CRPS[2],1), 0.8)
+  expect_equal(round(accuracy$RMSE[5], 2), 0.11)
+  expect_equal(round(accuracy$Scaled_RMSE[3], 3), 0.071)
+  expect_equal(accuracy$within_percentage[1], 1)
+  expect_equal(accuracy$within_threshold[2], 0)
+  expect_equal(accuracy$within_threshold_or_percentage[3], 1)
+  expect_equal(is.na(accuracy$AUC[1]), TRUE)
 
-  skip("Accuracy assessment temporarily disabled")
-  expect_equal(as.character(accuracy$model), "RF1_C")
-  expect_equal(accuracy$forecast.target, "annual.human.cases")
-  expect_equal(round(accuracy$CRPS,1), 15.1)
-  expect_equal(round(accuracy$RMSE, 1), 15.1) #**# Why is RMSE the same as CRPS? CRPS should be absolute error, not RMSE. Is only one data point being evaluated?
-  expect_equal(round(accuracy$Scaled_RMSE, 3), 0.236)
-  expect_equal(accuracy$within_percentage, 1)
-  expect_equal(accuracy$within_threshold, 0)
-  expect_equal(accuracy$within_threshold_or_percentage, 1)
-  expect_equal(accuracy$AUC, NA)
+
+  ## KNOWN ERRORS
+  # This is here to show that these are known errors, even if a more informative error message is desirable.
+
+  # Test for error if a start year is outside the data range
+  weekinquestion = as.Date("2018-08-15", "%Y-%m-%d") #**# Is the as.Date part necessary?
+  expect_error(suppressWarnings(dfmip.forecast(c("annual.human.cases"), c("RF1_C"), rf1::human.data, rf1::mosq.data,
+                                                  rf1::weather.data,
+                                                  weekinquestion, week.id, results.path,
+                                                  model.inputs = list(rf1.inputs = test.inputs), population.df = NA,
+                                                  point.estimate = 0, n.draws = 1000, is.test = TRUE)),
+               'newdata has 0 rows')
+
+  # Test for error if the start month takes place before the current year's mosquito sampling
+  expect_error(suppressWarnings(dfmip.hindcasts(c("annual.human.cases"), c("RF1_C"), c(2015), rf1::human.data, rf1::mosq.data,
+                                                rf1::weather.data, results.path,
+                                                model.inputs = list(rf1.inputs = test.inputs),
+                                                population.df = NA,
+                                                threshold = 1, percentage = 0.25, id.string = "test",
+                                                season_start_month = 7, weeks_in_season = 2,
+                                                n.draws = 1000, point.estimate = 0, is.test = TRUE)),
+               "newdata has 0 rows")
 
   unlink(results.path, recursive = TRUE)
 })
@@ -713,7 +751,6 @@ test_that("hindcasts works for all supported forecast targets simultaneously", {
   #load("../../vignettes/dfmip_example_inputs.RData")
   weekinquestion = as.Date("2018-08-15", "%Y-%m-%d") #**# Is the as.Date part necessary?
   week.id = sprintf("test:%s", weekinquestion)
-  districtshapefile = NA
 
   # Create a temporary results path
   results.path = "DFMIPTESTRESULTS/"
@@ -722,7 +759,7 @@ test_that("hindcasts works for all supported forecast targets simultaneously", {
   set.seed(20200302) #Needed becasue the mosquito calculations use MLE methods
   # Test hindcasts for multiple forecast targets simultaneously
   hindcasts = suppressWarnings(dfmip.hindcasts(c('annual.human.cases', "seasonal.mosquito.MLE"), c("NULL.MODELS"), c(2015), human.data, mosq.data,
-                                               weather.data, districtshapefile, results.path,
+                                               weather.data, results.path,
                                                model.inputs = list(),
                                                population.df = NA,
                                                threshold = 1, percentage = 0.25, id.string = "test",
