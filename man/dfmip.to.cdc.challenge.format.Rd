@@ -9,6 +9,8 @@ dfmip.to.cdc.challenge.format(model.name, forecast.distributions, out.file,
   151, 201, 1000))
 }
 \arguments{
+\item{model.name}{The name of the model results to subset from the forecast.distributions object}
+
 \item{forecast.distributions}{The forecast.distributions output created by dfmip for a single forecast model}
 
 \item{out.file}{The file to contain the CDC WNV forecast}

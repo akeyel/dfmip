@@ -38,6 +38,8 @@ VignetteBuilder: knitr
 Remotes:
 	akeyel/rf1,
 	akeyel/ArboMAP
+Depends:
+    R (>= 2.10)
 Imports:
 	caret,
 	dplyr,
