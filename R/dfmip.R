@@ -454,6 +454,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
 
   # Run hindcast analysis for selected years
   for (year in focal.years){
+    message(sprintf("Generating results for year %s", year))
     last.date = sprintf("%s-12-31", (year - 1))
     maxobservedhumandate <- as.Date(last.date, "%Y-%m-%d") # Last date of previous year
 
@@ -499,6 +500,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
       #**# Current year needs to be dropped for ArboMAP, but this may not be appropriate for other approaches. Need to re-address when this is an issue.
       #**# NOTE: the current year is dropped in this step. For the Random Forest analysis, it comes back with just 0's for cases, which is not correct, but allows the code to run and does not cause any errors (as those observations are not used for predictions or extracted as true observations)
       #**# This step would corrupt the data from the standpoint of Nick DeFelice's approach.
+      #**# Human data are not used in making a prediction for a new year, so if getting no rows for the forecast year, check weather and mosquitoes
 
       # Subset the mosquito data object
       mosq.data.subset = date.subset(mosq.data, year, month, day, 2)
