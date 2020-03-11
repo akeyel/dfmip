@@ -1990,6 +1990,7 @@ update.observations = function(observations.df, in.data, forecast.target, id.str
 
 #' Convert to CDC Forecast Challenge
 #'
+#' @param model.name The name of the model results to subset from the forecast.distributions object
 #' @param forecast.distributions The forecast.distributions output created by dfmip for a single forecast model
 #' @param out.file The file to contain the CDC WNV forecast
 #' @param n.draws The number of forecast draws in the forecast.distributions dataframe
