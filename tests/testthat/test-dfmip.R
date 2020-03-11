@@ -329,10 +329,13 @@ test_that("mosquito MLE estimates are calculated correctly",{
     skip('rf1 package must be installed to test MLE calculations. You can do this with devtools::install_github("akeyel/rf1")')
   }
 
-  # Load example data to run the models (back out two directories to get into main package directory)
-  load("dfmip_example_inputs.RData")
-  #load("../../vignettes/dfmip_example_inputs.RData")
+  # Load example data to run the models
+  mosq.data = dfmip::mosq.data
+
+  # Run the function
   estimate = rf1::calculate.MLE.v2(mosq.data)
+
+  # Check that everything is as it should be
   expect_equal(names(estimate), c("GROUP", "CI.lower", "CI.upper", "IR", "COUNTY", "abundance", "density", "YEAR", "county_year"))
   expect_equal(round(estimate$CI.lower[1],5), 0.00059)
   expect_equal(round(estimate$CI.upper[1],5), 0.01121)
@@ -348,16 +351,6 @@ test_that("mosquito MLE estimates are calculated correctly",{
 
 })
 
-test_that('the example data can be loaded properly', {
-  # Load example data to run the models (back out two directories to get into main package directory)
-  #stop(getwd())
-  load("dfmip_example_inputs.RData")
-  expect_equal(1,1)
-
-
-})
-
-
 #**# SKIP THIS ON CRAN - THIS WILL TAKE A WHILE TO RUN
 test_that("ArboMAP model produces the expected outputs", {
 
@@ -366,10 +359,6 @@ test_that("ArboMAP model produces the expected outputs", {
   if (Test_All == 0 | Test_All == 2){
     skip_on_os('windows') #"Skipped testing ArboMAP model to save time") #**# Enable when testing code other than the main functions
   }
-
-  # Load example data to run the models (back out two directories to get into main package directory)
-  #load("dfmip_example_inputs.RData")
-  #load("../../vignettes/dfmip_example_inputs.RData")
 
   # Create a temporary results path
   results.path = "DFMIPTESTRESULTS/"
@@ -437,9 +426,7 @@ test_that("NULL model produces the expected outputs", {
   #  #skip("Skipped NULL model tests to save time") #**# Enable when testing code other than the main functions
   #}
 
-  # Load example data to run the models (back out two directories to get into main package directory)
-  #load("dfmip_example_inputs.RData")
-  #load("../../vignettes/dfmip_example_inputs.RData")
+  # Load example data to run the models
 
   weekinquestion = as.Date("2018-08-15", "%Y-%m-%d") #**# Is the as.Date part necessary?
   week.id = sprintf("test:%s", weekinquestion)
@@ -519,9 +506,6 @@ test_that("NULL model produces the expected outputs for mosquitoes", {
   # Load example data to run the models (back out two directories to get into main package directory)
   weekinquestion = as.Date("2018-08-15", "%Y-%m-%d") #**# Is the as.Date part necessary?
   week.id = sprintf("test:%s", weekinquestion)
-
-  #load("dfmip_example_inputs.RData")
-  #load("../../vignettes/dfmip_example_inputs.RData")
 
   # Create a temporary results path
   results.path = "DFMIPTESTRESULTS/"
@@ -746,9 +730,7 @@ test_that("hindcasts works for all supported forecast targets simultaneously", {
   #  skip("Skipped test of all outputs") #**# Enable when testing code other than the main functions
   #}
 
-  # Load example data to run the models (back out two directories to get into main package directory)
-  #load("dfmip_example_inputs.RData")
-  #load("../../vignettes/dfmip_example_inputs.RData")
+  # Load example data to run the models
   weekinquestion = as.Date("2018-08-15", "%Y-%m-%d") #**# Is the as.Date part necessary?
   week.id = sprintf("test:%s", weekinquestion)
 

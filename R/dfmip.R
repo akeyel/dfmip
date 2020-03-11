@@ -1988,3 +1988,100 @@ update.observations = function(observations.df, in.data, forecast.target, id.str
 }
 
 
+#' Convert to CDC Forecast Challenge
+#'
+#' @param forecast.distributions The forecast.distributions output created by dfmip for a single forecast model
+#' @param out.file The file to contain the CDC WNV forecast
+#' @param n.draws The number of forecast draws in the forecast.distributions dataframe
+#' @param bins Identify bins used. Inclusive on the lower bound. The upper bin must exceed all observations, otherwise probabilities will not sum to 1.
+#'
+#' @return forecast.template The forecast in the format required by the CDC (also written to file).
+#'
+#' @export dfmip.to.cdc.challenge.format
+#'
+dfmip.to.cdc.challenge.format = function(model.name, forecast.distributions, out.file, n.draws,
+                                         bins = c(0, 1, 6, 11, 16, 21, 26, 31, 36, 41, 46, 51, 101, 151, 201, 1000) ){
+
+  # Make sure data is restricted to annual.human.cases
+  forecast.distributions = forecast.distributions[forecast.distributions$forecast.target == 'annual.human.cases', ]
+
+  # Make sure data is restricted to only the model of interest
+  forecast.distributions = forecast.distributions[forecast.distributions$model.name == model.name, ]
+
+  # Split out forecast ID
+  districts = sapply(forecast.distributions$forecast.id, dfmip::splitter, ":", 3, 1)
+  forecast.distributions$district = districts
+
+  # Drop any statewide estimates
+  statewide =  grep("STATEWIDE", districts)
+  index = rep(1, length(districts))
+  index[statewide] = 0
+  forecast.distributions = forecast.distributions[index == 1, ]
+
+  # Ensure the forecasts are numeric
+  for (col in 1:ncol(forecast.distributions)){
+    if (col > 6){
+      if (col <= (n.draws + 6)){
+        forecast.distributions[ ,col] = as.numeric(as.character(forecast.distributions[ , col]))
+      }
+    }
+  }
+
+  # Create a forecast dataframe to contain results
+  cdc.target = "Total WNV neuroinvasive disease cases"
+  cdc.forecast = data.frame(location = NA, target = cdc.target,
+                            type = 'Bin', unit = 'cases', bin_start_inclusive = NA,
+                            bin_end_notinclusive = NA, value = NA)
+
+  # Loop through entries in forecast.distributions
+  for (i in 1:nrow(forecast.distributions)){
+
+    this.district = forecast.distributions$district[i]
+    this.record = forecast.distributions[i, 7:(6+n.draws)]
+
+    # For each county:
+    # Add the point estimate first
+    point.value = unname(apply(this.record, c(1), mean, na.rm = TRUE))
+
+    point.forecast = data.frame(location = this.district, target = cdc.target, type = "Point",
+                                unit = 'cases', bin_start_inclusive = "NA", bin_end_notinclusive = "NA",
+                                value = point.value)
+    cdc.forecast = rbind(cdc.forecast, point.forecast)
+
+    # Calculate probabilities for each bin
+    first.bin = bins[1]
+
+    for (j in 2:length(bins)){
+      next.bin = bins[j]
+
+      # Get number of estimates in this bin
+      index.p1 = this.record >= first.bin
+      index.p2 = this.record < next.bin
+      index = index.p1 & index.p2
+      in.bin = this.record[ ,index == TRUE]
+      bin.count = length(in.bin)
+
+      # Divide by total number of draws to get a probability
+      bin.value = bin.count / n.draws
+
+      # Update dataframe
+      bin.forecast = data.frame(location = this.district, target = cdc.target,
+                                type = 'Bin', unit = 'cases', bin_start_inclusive = first.bin,
+                                bin_end_notinclusive = next.bin, value = bin.value)
+      cdc.forecast = rbind(cdc.forecast, bin.forecast)
+
+      # Update lower bin
+      first.bin = next.bin
+    }
+  }
+
+  # Add Check that probabilities sum to 1 (Or check that all observations are less than the upper bin)
+
+  # Drop NA initialization
+  cdc.forecast = cdc.forecast[2:nrow(cdc.forecast), ]
+
+  # Write to file
+  write.table(cdc.forecast, file = out.file, sep = ',', row.names = FALSE, col.names = TRUE)
+
+  return(cdc.forecast)
+}
