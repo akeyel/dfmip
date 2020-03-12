@@ -5,7 +5,8 @@
 \title{Evaluate accuracy}
 \usage{
 evaluate.accuracy(models.to.run, forecast.distributions, forecast.targets,
-  observations.df, n.draws)
+  observations.df, n.draws, threshold = "default",
+  percentage = "default")
 }
 \arguments{
 \item{models.to.run}{See \code{\link{dfmip.forecast}}}
@@ -18,6 +19,10 @@ evaluate.accuracy(models.to.run, forecast.distributions, forecast.targets,
 Value contains the observed value for the district and year for the corresponding forecast.target}
 
 \item{n.draws}{See \code{\link{dfmip.forecast}}}
+
+\item{threshold}{For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.}
+
+\item{percentage}{For continuous and discrete forecasts, if the prediction is within the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.}
 }
 \value{
 accuracy.summary A data frame organized by model, district

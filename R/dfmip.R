@@ -556,7 +556,10 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
   }
 
   # Calculate accuracy of the probablistic forecasts
-  accuracy.summary = evaluate.accuracy(models.to.run, forecast.distributions, forecast.targets, observations.df, n.draws)
+  accuracy.summary = evaluate.accuracy(models.to.run, forecast.distributions, forecast.targets,
+                                       observations.df, n.draws, threshold, percentage)
+
+  #
 
   return(list(accuracy.summary, forecasts.df, forecast.distributions, observations.df))
 }
@@ -569,7 +572,9 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
 #' @param observations.df A data frame with five fields: district, year, district_year, forecast.target, and value.
 #' Value contains the observed value for the district and year for the corresponding forecast.target
 #' @param n.draws See \code{\link{dfmip.forecast}}
-#'
+#' @param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.
+#' @param percentage For continuous and discrete forecasts, if the prediction is within the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.
+
 #' @return accuracy.summary A data frame organized by model, district
 #' (and an aggregation across all districts, currently denoted -STATEWIDE, but this does not have to be a state),
 #' forecast.target, with entries for the following evaluation metrics: CRPS, RMSE, Scaled_RMSE, percentage, threshold,
@@ -577,7 +582,8 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
 #'
 #' @export evaluate.accuracy
 #'
-evaluate.accuracy = function(models.to.run, forecast.distributions, forecast.targets, observations.df, n.draws){
+evaluate.accuracy = function(models.to.run, forecast.distributions, forecast.targets, observations.df, n.draws,
+                             threshold = 'default', percentage = 'default'){
 
   # Create accuracy summary object
   accuracy.summary = data.frame(model = NA, district = NA, forecast.target = NA,
@@ -633,15 +639,27 @@ evaluate.accuracy = function(models.to.run, forecast.distributions, forecast.tar
           #**# Is there a less positionally-dependent way to do this? Not that I can think of right now. Would be nice to draw the numbers of columns from somewhere though.
           #without as.numeric, it is coming out as a list and a later 'apply' step is failing. as.numeric seems to fix this issue
           # The next step should put it back into the correctly dimensioned matrix
-          model.forecast.distributions = as.numeric(dist.subset[ , 8:(n.draws + 7)])
-          n.col = (n.draws + 7) - 8 + 1 # calculate number of columns. Data must be in matrix format, and R drops that formatting for a single entry, so we have to add it back in.
-          model.forecast.distributions = matrix(model.forecast.distributions, ncol = n.col)
+          model.forecast.distributions.pre = dist.subset[ , 8:(n.draws + 7)]
+          # Correct for R dropping a 1,1 matrix out of matrix format
+          if (length(dim(model.forecast.distributions.pre)) == 0){
+            model.forecast.distributions = matrix(model.forecast.distributions.pre, ncol = 1)
+          }else{
+            model.forecast.distributions = as.numeric(as.character(model.forecast.distributions.pre[1, ]))
+            if (nrow(model.forecast.distributions.pre) > 1){
+              for (m in 2:nrow(model.forecast.distributions.pre)){
+                model.forecast.distributions = rbind(model.forecast.distributions, as.numeric(as.character(model.forecast.distributions.pre[m , ])))
+              }
+            }
+
+            n.col = (n.draws + 7) - 8 + 1 # calculate number of columns. Data must be in matrix format, and R drops that formatting for a single entry, so we have to add it back in.
+            model.forecast.distributions = matrix(model.forecast.distributions, ncol = n.col)
+          }
 
           # Observations will be added with the field name 'value', so this should just correspond to observations in the same order
           observations.vec = as.numeric(as.character(dist.subset$value))
 
           # Assess hindcast accuracy for each target
-          target.accuracy.metrics = assess.accuracy(model.forecast.distributions, observations.vec, forecast.target)
+          target.accuracy.metrics = assess.accuracy(model.forecast.distributions, observations.vec, forecast.target, threshold, percentage)
 
           # Convert from list format to vector format #**# Could just use vector format to begin with!
           target.accuracy.metrics.vec = c()
@@ -1939,6 +1957,9 @@ update.observations = function(observations.df, in.data, forecast.target, id.str
 
   # Update human cases
   if (forecast.target == 'annual.human.cases'){
+    # Make sure district is treated as character
+    in.data$district = as.character(in.data$district)
+
     # Human data is in format of one case per year, so nrow works the same as a sum
     year.data = in.data[in.data$year == year, ]
     year.human.cases = nrow(year.data)

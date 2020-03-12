@@ -566,7 +566,7 @@ test_that("NULL model produces the expected outputs for mosquitoes", {
   expect_equal(round(accuracy$RMSE[1], 5), 0.00006) #**# Why is RMSE the same as CRPS? CRPS should be absolute error, not RMSE. Is only one data point being evaluated?
   expect_equal(round(accuracy$Scaled_RMSE[1], 3), 0.034)
   expect_equal(accuracy$within_percentage[1], 1)
-  expect_equal(accuracy$within_threshold[1], 0)
+  expect_equal(accuracy$within_threshold[1], 1)
   expect_equal(accuracy$within_threshold_or_percentage[1], 1)
   expect_equal(is.na(accuracy$AUC[1]), TRUE)
   # NOTE: It was 27 above, but forecasts could be made for eight counties  due to presence of historical data
@@ -594,8 +594,11 @@ test_that("DFMIP interfaces properly with the RF1 model", {
 
   week.id = sprintf("test:%s", weekinquestion)
   test.inputs = dfmip::rf1.inputs
+  test.inputs[[1]] = NA
+  test.inputs[[2]] = NA
   test.inputs[[3]] = c('district1', 'district2', 'district3', 'district4')
   test.inputs[[4]] = seq(2011, 2015)
+  test.inputs[[5]] = NA
 
   # Create a temporary results path
   results.path = "DFMIPTESTRESULTS/"
@@ -693,7 +696,7 @@ test_that("DFMIP interfaces properly with the RF1 model", {
   expect_equal(round(accuracy$RMSE[5], 2), 0.11)
   expect_equal(round(accuracy$Scaled_RMSE[3], 3), 0.071)
   expect_equal(accuracy$within_percentage[1], 1)
-  expect_equal(accuracy$within_threshold[2], 0)
+  expect_equal(accuracy$within_threshold[2], 1)
   expect_equal(accuracy$within_threshold_or_percentage[3], 1)
   expect_equal(is.na(accuracy$AUC[1]), TRUE)
 
@@ -740,13 +743,14 @@ test_that("hindcasts works for all supported forecast targets simultaneously", {
 
   set.seed(20200302) #Needed becasue the mosquito calculations use MLE methods
   # Test hindcasts for multiple forecast targets simultaneously
-  hindcasts = suppressWarnings(dfmip.hindcasts(c('annual.human.cases', "seasonal.mosquito.MLE"), c("NULL.MODELS"), c(2015), human.data, mosq.data,
-                                               weather.data, results.path,
+  hindcasts = suppressWarnings(dfmip.hindcasts(c('annual.human.cases', "seasonal.mosquito.MLE"), c("NULL.MODELS"), c(2015),
+                                               dfmip::human.data, dfmip::mosq.data,
+                                               dfmip::weather.data, results.path,
                                                model.inputs = list(),
                                                population.df = NA,
                                                threshold = 1, percentage = 0.25, id.string = "test",
                                                season_start_month = 7, weeks_in_season = 1,
-                                               n.draw = 1, point.estimate = 1))
+                                               n.draws = 1, point.estimate = 1))
 
   accuracy = hindcasts[[1]]
   forecasts.df = hindcasts[[2]]
@@ -781,7 +785,7 @@ test_that("hindcasts works for all supported forecast targets simultaneously", {
   expect_equal(accuracy$within_percentage[1], 0)
   expect_equal(accuracy$within_percentage[68], 1)
   expect_equal(accuracy$within_threshold[1], 0)
-  expect_equal(accuracy$within_threshold[68], 0)
+  expect_equal(accuracy$within_threshold[68], 1)
   expect_equal(accuracy$within_threshold_or_percentage[68], 1)
   expect_equal(is.na(accuracy$AUC[1]), TRUE)
 

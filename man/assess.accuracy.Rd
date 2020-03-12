@@ -27,9 +27,9 @@ categories.}
 \item positive_pools_binary
 \item peak_timing }}
 
-\item{threshold}{For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.}
+\item{threshold}{For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate".}
 
-\item{percentage}{For continuous and discrete forecasts, if the prediction is within the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.}
+\item{percentage}{For continuous and discrete forecasts, if the prediction is within the specified percentage of the observed value, the forecast is considered accurate.}
 }
 \value{
 accuracy.metrics A list containing accuracy information. The list is
