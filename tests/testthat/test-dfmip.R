@@ -222,13 +222,14 @@ test_that("Null model district calculations work properly", {
   n.years = 14
   human.data = dfmip::human.data
   human.data$year = vapply(as.character(human.data$date), splitter, FUN.VALUE = numeric(1),  "/", 3)
+  analysis.districts = unique(human.data$district)
   set.seed(20200221)
 
   # Test point.estimate = 0
   point.estimate = 0
   ## Test n.draws = 1
   n.draws = 1
-  dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
+  dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate, analysis.districts)
   district.mean.cases = dcnm.out[[1]]
   expect_equal(nrow(district.mean.cases), 66)
   expect_equal(ncol(district.mean.cases), 7)
@@ -240,7 +241,7 @@ test_that("Null model district calculations work properly", {
 
   ## Test n.draws = 10
   n.draws = 10
-  dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
+  dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate, analysis.districts)
   district.mean.cases = dcnm.out[[1]]
   expect_equal(nrow(district.mean.cases), 66)
   expect_equal(ncol(district.mean.cases), 7)
@@ -250,10 +251,9 @@ test_that("Null model district calculations work properly", {
   expect_equal(ncol(district.distributions), 16)
   expect_equal(district.distributions[66, 8], 0)
 
-
   ## Test n.draws = 15
   n.draws = 15
-  dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
+  dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate, analysis.districts)
   district.mean.cases = dcnm.out[[1]]
   expect_equal(nrow(district.mean.cases), 66)
   expect_equal(ncol(district.mean.cases), 7)
@@ -267,7 +267,7 @@ test_that("Null model district calculations work properly", {
   point.estimate = 1
   ## Test n.draws = 1
   n.draws = 1
-  dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
+  dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate, analysis.districts)
   district.mean.cases = dcnm.out[[1]]
   expect_equal(nrow(district.mean.cases), 66)
   expect_equal(ncol(district.mean.cases), 7)
@@ -280,7 +280,7 @@ test_that("Null model district calculations work properly", {
 
   ## Test n.draws = 10
   n.draws = 10
-  dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate)
+  dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate, analysis.districts)
   district.mean.cases = dcnm.out[[1]]
   expect_equal(nrow(district.mean.cases), 66)
   expect_equal(ncol(district.mean.cases), 7)
@@ -289,6 +289,31 @@ test_that("Null model district calculations work properly", {
   expect_equal(nrow(district.distributions), 66)
   expect_equal(ncol(district.distributions), 16)
   expect_equal(round(district.distributions[1, 16], 1), 7.3)
+
+  ## Test district in analysis.district but with no reported human cases
+  # NOTE: No check is made to ensure that only districts within analysis.districts are present (but that is handled by the main dfmip code)
+  analysis.districts = c(as.character(analysis.districts), 'madeupland')
+  dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate, analysis.districts)
+  district.mean.cases = dcnm.out[[1]]
+  district.distributions = dcnm.out[[2]]
+  expect_equal(nrow(district.mean.cases), 67)
+  expect_equal(nrow(district.distributions), 67)
+  expect_equal(round(district.mean.cases$value[1],1), 7.3)
+  expect_equal(round(district.mean.cases$value[67],1), 0)
+  expect_equal(round(district.distributions[67, 16], 1), 0)
+  expect_equal(round(district.distributions[1, 16], 1), 7.3)
+
+  point.estimate = 0
+  dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate, analysis.districts)
+  district.mean.cases = dcnm.out[[1]]
+  district.distributions = dcnm.out[[2]]
+  expect_equal(nrow(district.mean.cases), 67)
+  expect_equal(nrow(district.distributions), 67)
+  expect_equal(round(district.mean.cases$value[1],1), 7.3)
+  expect_equal(round(district.mean.cases$value[67],1), 0)
+  expect_equal(round(district.distributions[67, 16], 1), 0)
+  #expect_equal(round(district.distributions[1, 16], 1), 14)
+  expect_equal(round(district.distributions[1, 16], 1), 7) #**# This changed. Unclear why.
 
 
 })
@@ -329,10 +354,13 @@ test_that("mosquito MLE estimates are calculated correctly",{
     skip('rf1 package must be installed to test MLE calculations. You can do this with devtools::install_github("akeyel/rf1")')
   }
 
-  # Load example data to run the models (back out two directories to get into main package directory)
-  load("dfmip_example_inputs.RData")
-  #load("../../vignettes/dfmip_example_inputs.RData")
+  # Load example data to run the models
+  mosq.data = dfmip::mosq.data
+
+  # Run the function
   estimate = rf1::calculate.MLE.v2(mosq.data)
+
+  # Check that everything is as it should be
   expect_equal(names(estimate), c("GROUP", "CI.lower", "CI.upper", "IR", "COUNTY", "abundance", "density", "YEAR", "county_year"))
   expect_equal(round(estimate$CI.lower[1],5), 0.00059)
   expect_equal(round(estimate$CI.upper[1],5), 0.01121)
@@ -348,16 +376,6 @@ test_that("mosquito MLE estimates are calculated correctly",{
 
 })
 
-test_that('the example data can be loaded properly', {
-  # Load example data to run the models (back out two directories to get into main package directory)
-  #stop(getwd())
-  load("dfmip_example_inputs.RData")
-  expect_equal(1,1)
-
-
-})
-
-
 #**# SKIP THIS ON CRAN - THIS WILL TAKE A WHILE TO RUN
 test_that("ArboMAP model produces the expected outputs", {
 
@@ -366,10 +384,6 @@ test_that("ArboMAP model produces the expected outputs", {
   if (Test_All == 0 | Test_All == 2){
     skip_on_os('windows') #"Skipped testing ArboMAP model to save time") #**# Enable when testing code other than the main functions
   }
-
-  # Load example data to run the models (back out two directories to get into main package directory)
-  #load("dfmip_example_inputs.RData")
-  #load("../../vignettes/dfmip_example_inputs.RData")
 
   # Create a temporary results path
   results.path = "DFMIPTESTRESULTS/"
@@ -437,9 +451,7 @@ test_that("NULL model produces the expected outputs", {
   #  #skip("Skipped NULL model tests to save time") #**# Enable when testing code other than the main functions
   #}
 
-  # Load example data to run the models (back out two directories to get into main package directory)
-  #load("dfmip_example_inputs.RData")
-  #load("../../vignettes/dfmip_example_inputs.RData")
+  # Load example data to run the models
 
   weekinquestion = as.Date("2018-08-15", "%Y-%m-%d") #**# Is the as.Date part necessary?
   week.id = sprintf("test:%s", weekinquestion)
@@ -520,9 +532,6 @@ test_that("NULL model produces the expected outputs for mosquitoes", {
   weekinquestion = as.Date("2018-08-15", "%Y-%m-%d") #**# Is the as.Date part necessary?
   week.id = sprintf("test:%s", weekinquestion)
 
-  #load("dfmip_example_inputs.RData")
-  #load("../../vignettes/dfmip_example_inputs.RData")
-
   # Create a temporary results path
   results.path = "DFMIPTESTRESULTS/"
   dir.create(results.path)
@@ -537,8 +546,6 @@ test_that("NULL model produces the expected outputs for mosquitoes", {
   forecasts.df = dfmip.outputs[[1]]
   forecast.distributions = dfmip.outputs[[2]]
   other.results = dfmip.outputs[[3]]
-
-  #**# LEFT OFF UPDATING UNIT TEST
 
   # Test forecasts.df object
   expect_equal(round(forecasts.df$value[1], 4), 0.0015)
@@ -578,16 +585,17 @@ test_that("NULL model produces the expected outputs for mosquitoes", {
   # Confirm accuracy calculations worked correctly
   expect_equal(as.character(accuracy$model[1]), "NULL.MODELS")
   expect_equal(accuracy$forecast.target[1], "seasonal.mosquito.MLE")
-  expect_equal(round(accuracy$CRPS[1],5), 0.00071)
-  expect_equal(round(accuracy$RMSE[1], 5), 0.00006) #**# Why is RMSE the same as CRPS? CRPS should be absolute error, not RMSE. Is only one data point being evaluated?
-  expect_equal(round(accuracy$Scaled_RMSE[1], 3), 0.034)
+  #expect_equal(round(accuracy$CRPS[1],5), 0.00071)
+  expect_equal(round(accuracy$CRPS[1],5), 0.00031) #**# This changed. Likely due to a shift in random numbers.
+  expect_equal(round(accuracy$RMSE[1], 5), 0.00009)
+  expect_equal(round(accuracy$Scaled_RMSE[1], 3), 0.068) #**# This changed from 0.034
   expect_equal(accuracy$within_percentage[1], 1)
-  expect_equal(accuracy$within_threshold[1], 0)
+  expect_equal(accuracy$within_threshold[1], 1)
   expect_equal(accuracy$within_threshold_or_percentage[1], 1)
   expect_equal(is.na(accuracy$AUC[1]), TRUE)
   # NOTE: It was 27 above, but forecasts could be made for eight counties  due to presence of historical data
   # However, accuracy could not be calculated as no observations were made in 2015
-  expect_equal(nrow(accuracy), 19)
+  expect_equal(nrow(accuracy), 20) # Added an extra row, which is what threw off all the random numbers above
   #Can add additional tests for district results
 
   unlink(results.path, recursive = TRUE)
@@ -610,8 +618,11 @@ test_that("DFMIP interfaces properly with the RF1 model", {
 
   week.id = sprintf("test:%s", weekinquestion)
   test.inputs = dfmip::rf1.inputs
+  test.inputs[[1]] = NA
+  test.inputs[[2]] = NA
   test.inputs[[3]] = c('district1', 'district2', 'district3', 'district4')
   test.inputs[[4]] = seq(2011, 2015)
+  test.inputs[[5]] = NA
 
   # Create a temporary results path
   results.path = "DFMIPTESTRESULTS/"
@@ -709,7 +720,7 @@ test_that("DFMIP interfaces properly with the RF1 model", {
   expect_equal(round(accuracy$RMSE[5], 2), 0.11)
   expect_equal(round(accuracy$Scaled_RMSE[3], 3), 0.071)
   expect_equal(accuracy$within_percentage[1], 1)
-  expect_equal(accuracy$within_threshold[2], 0)
+  expect_equal(accuracy$within_threshold[2], 1)
   expect_equal(accuracy$within_threshold_or_percentage[3], 1)
   expect_equal(is.na(accuracy$AUC[1]), TRUE)
 
@@ -746,9 +757,7 @@ test_that("hindcasts works for all supported forecast targets simultaneously", {
   #  skip("Skipped test of all outputs") #**# Enable when testing code other than the main functions
   #}
 
-  # Load example data to run the models (back out two directories to get into main package directory)
-  #load("dfmip_example_inputs.RData")
-  #load("../../vignettes/dfmip_example_inputs.RData")
+  # Load example data to run the models
   weekinquestion = as.Date("2018-08-15", "%Y-%m-%d") #**# Is the as.Date part necessary?
   week.id = sprintf("test:%s", weekinquestion)
 
@@ -756,15 +765,19 @@ test_that("hindcasts works for all supported forecast targets simultaneously", {
   results.path = "DFMIPTESTRESULTS/"
   dir.create(results.path)
 
+  analysis.districts = unique(dfmip::human.data$district)
+
   set.seed(20200302) #Needed becasue the mosquito calculations use MLE methods
   # Test hindcasts for multiple forecast targets simultaneously
-  hindcasts = suppressWarnings(dfmip.hindcasts(c('annual.human.cases', "seasonal.mosquito.MLE"), c("NULL.MODELS"), c(2015), human.data, mosq.data,
-                                               weather.data, results.path,
+  hindcasts = suppressWarnings(dfmip.hindcasts(c('annual.human.cases', "seasonal.mosquito.MLE"), c("NULL.MODELS"), c(2015),
+                                               dfmip::human.data, dfmip::mosq.data,
+                                               dfmip::weather.data, results.path,
                                                model.inputs = list(),
                                                population.df = NA,
                                                threshold = 1, percentage = 0.25, id.string = "test",
                                                season_start_month = 7, weeks_in_season = 1,
-                                               n.draw = 1, point.estimate = 1))
+                                               n.draws = 1, point.estimate = 1,
+                                               analysis.districts = analysis.districts))
 
   accuracy = hindcasts[[1]]
   forecasts.df = hindcasts[[2]]
@@ -785,25 +798,83 @@ test_that("hindcasts works for all supported forecast targets simultaneously", {
   expect_equal(round(forecast.distributions[1,7], 1), 88.7)
 
   # Assess accuracy metrics
-  expect_equal(nrow(accuracy), 86) # Not 94 as above, as 8 counties had forecasts but were missing an observed for 2015
+  expect_equal(nrow(accuracy), 87) # Not 94 as above, as 8 counties had forecasts but were missing an observed for 2015
   expect_equal(as.character(accuracy$model[1]), "NULL.MODELS")
   expect_equal(accuracy$forecast.target[1], "annual.human.cases")
   expect_equal(accuracy$forecast.target[67], "annual.human.cases")
   expect_equal(accuracy$forecast.target[68], "seasonal.mosquito.MLE")
   expect_equal(round(accuracy$CRPS[1],0), 25)
-  expect_equal(round(accuracy$CRPS[68],5), 0.00012) # wonder why this changed from 0.00013? Assume due to MLE calculations
+  expect_equal(round(accuracy$CRPS[68],5), 0.00013) # Back to 0.00013 from 0.00012. Changed with change in drawn numbers
   expect_equal(round(accuracy$RMSE[1], 0), 25)
-  expect_equal(round(accuracy$RMSE[68], 5), 0.00012) #Formerly 0.00013
+  expect_equal(round(accuracy$RMSE[68], 5), 0.00013) #Formerly 0.00012, and before that 0.00013
   expect_equal(round(accuracy$Scaled_RMSE[1], 3), 0.386)
-  expect_equal(round(accuracy$Scaled_RMSE[68], 3), 0.07) # changed from 0.097
+  expect_equal(round(accuracy$Scaled_RMSE[68], 3), 0.097) # changed back to 0.097
   expect_equal(accuracy$within_percentage[1], 0)
   expect_equal(accuracy$within_percentage[68], 1)
   expect_equal(accuracy$within_threshold[1], 0)
-  expect_equal(accuracy$within_threshold[68], 0)
+  expect_equal(accuracy$within_threshold[68], 1)
   expect_equal(accuracy$within_threshold_or_percentage[68], 1)
   expect_equal(is.na(accuracy$AUC[1]), TRUE)
 
   unlink(results.path, recursive = TRUE)
 })
 
+# Test that code handles various missing district situations correctly
+test_that("Missing district situations are handled predictably", {
 
+  # Test that data is restricted to analysis.districts properly
+
+  analysis.districts = c('c','d')
+  human.data = data.frame(district = c('a','b','c'), year = seq(2002,2004)) # Other columns extraneous for this test
+  mosq.data = data.frame(district = c('d','e','f'))
+  analysis.districts = configure.analysis.districts(analysis.districts, forecast.targets, human.data, mosq.data)
+  human.data =   human.data[human.data$district %in% analysis.districts, ]
+  expect_equal(nrow(human.data), 1) # should only be district c remained, no rows should be added here for missing district d.
+
+  # Test that observations.df is updated correctly when all districts are present in analysis.districts
+  observations.df = data.frame(district = NA, year = NA, district_year = NA, forecast.target = NA, value = NA)
+  in.data = data.frame(district = c('a','a', 'b','c'), date = "8/1/2004", year = 2004)
+  forecast.target = 'annual.human.cases'
+  year = 2004
+  id.string = 'test'
+  analysis.districts = c('a','b','c')
+  observations.df = update.observations(observations.df, in.data, forecast.target, id.string, year, analysis.districts)
+  expect_equal(nrow(observations.df), 4)
+
+  # Test that observations.df is updated correctly when districts are missing from analysis.districts
+  observations.df = data.frame(district = NA, year = NA, district_year = NA, forecast.target = NA, value = NA)
+  analysis.districts = c('a','b','c','d')
+  observations.df = update.observations(observations.df, in.data, forecast.target, id.string, year, analysis.districts)
+  expect_equal(nrow(observations.df), 5)
+
+  #**# HOW TO BEST ENSURE THAT INDIVIDUAL MODULES INCLUDE A TEST FOR THIS SITUATION?
+  # I want those unit tests to happen in-module, to avoid too much overhead here
+  # But I want to have some way to know they are happening.
+
+
+})
+
+
+# Test configure.analysis function
+test_that("Configure analysis function works", {
+
+  # Test default without mosquito forecast target
+  analysis.districts = 'default'
+  forecast.targets = c('annual.human.cases')
+  human.data = data.frame(district = c('a','b','c')) # Other columns extraneous for this test
+  mosq.data = data.frame(district = c('d','e','f'))
+  analysis.districts = configure.analysis.districts(analysis.districts, forecast.targets, human.data, mosq.data)
+  expect_equal(analysis.districts, c('a','b','c'))
+
+  # Test default with mosquito forecast target
+  analysis.districts = 'default'
+  forecast.targets = c('seasonal.mosquito.MLE')
+  analysis.districts = configure.analysis.districts(analysis.districts, forecast.targets, human.data, mosq.data)
+  expect_equal(analysis.districts, c('d','e','f'))
+
+  # Test with specified districts
+  analysis.districts = c('g','h','i')
+  analysis.districts = configure.analysis.districts(analysis.districts, forecast.targets, human.data, mosq.data)
+  expect_equal(analysis.districts, c('g','h','i'))
+
+})

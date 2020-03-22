@@ -36,8 +36,8 @@ NULL
 #' \item human_cases_binary
 #' \item positive_pools_binary
 #' \item peak_timing }
-#'@param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.
-#'@param percentage For continuous and discrete forecasts, if the prediction is within the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.
+#'@param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate".
+#'@param percentage For continuous and discrete forecasts, if the prediction is within the specified percentage of the observed value, the forecast is considered accurate.
 #'
 #'@return accuracy.metrics A list containing accuracy information. The list is
 #'   structured \tabular{ll}{
@@ -62,8 +62,8 @@ assess.accuracy = function(predictions.mat, observations.vec, forecast.target, t
 
   # Set up vectors of forecasting targets
   binary.targets = c("human_cases_binary" , "positive_pools_binary")
-  continuous.targets = c("annual.human.cases", "human_incidence", "seasonal.mosquito.MLE", "peak_mosquito_MLE")
-  discrete.targets = c("number_positive_pools")
+  continuous.targets = c( "human_incidence", "seasonal.mosquito.MLE", "peak_mosquito_MLE")
+  discrete.targets = c("annual.human.cases", "number_positive_pools")
   time.targets = c("peak_timing")
   forecast.targets = c(binary.targets, continuous.targets, discrete.targets, time.targets)
 
@@ -84,27 +84,27 @@ assess.accuracy = function(predictions.mat, observations.vec, forecast.target, t
   # If forecast target is binary
   if (forecast.target %in% binary.targets){
     # Update AUC
-    stop("BINARY FORECASTS ARE NOT YET SUPPORTED")
+    try(stop("BINARY FORECASTS ARE NOT YET SUPPORTED"))
 
   }
 
   # If forecast target is continuous
   if (forecast.target %in% continuous.targets){
     # Update RMSE, Scaled RMSE, percentage, threshold, threshold & percentage, CRPS
-    accuracy.metrics = update.continuous.targets(accuracy.metrics, predictions.mat, observations.vec, threshold, percentage)
+    accuracy.metrics = try(update.continuous.targets(accuracy.metrics, predictions.mat, observations.vec, threshold, percentage))
   }
 
   #**# Does this require special handling, due to the discrete nature?
   # If forecast target is discrete
   if (forecast.target %in% discrete.targets){
     # Update RMSE, scaled RMSE, percentage, threshold, threshold & percentage, CRPS
-    accuracy.metrics = update.continuous.targets(accuracy.metrics, predictions.mat, observations.vec, threshold, percentage)
+    accuracy.metrics = try(update.continuous.targets(accuracy.metrics, predictions.mat, observations.vec, threshold, percentage))
   }
 
   # If forecast target is a time interval
   if (forecast.target %in% time.targets){
     # update threshold
-    accuracy.metrics = update.time.targets(accuracy.metrics, predictions.mat, observations.vec, threshold)
+    accuracy.metrics = try(update.time.targets(accuracy.metrics, predictions.mat, observations.vec, threshold))
 
   }
 
