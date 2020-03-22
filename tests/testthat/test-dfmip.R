@@ -249,9 +249,7 @@ test_that("Null model district calculations work properly", {
   district.distributions = dcnm.out[[2]]
   expect_equal(nrow(district.distributions), 66)
   expect_equal(ncol(district.distributions), 16)
-  #expect_equal(district.distributions[66, 8], 0)
-  expect_equal(district.distributions[66, 8], 16) #**# This changed. Why? Was a new random process introduced somewhere in the code that adjusted the seed?
-
+  expect_equal(district.distributions[66, 8], 0)
 
   ## Test n.draws = 15
   n.draws = 15
@@ -263,8 +261,7 @@ test_that("Null model district calculations work properly", {
   district.distributions = dcnm.out[[2]]
   expect_equal(nrow(district.distributions), 66)
   expect_equal(ncol(district.distributions), 21)
-  #expect_equal(district.distributions[66, 11], 32)
-  expect_equal(district.distributions[66, 11], 0) #**# THIS CHANGED, WHY?
+  expect_equal(district.distributions[66, 11], 32)
 
   # Test point.estimate = 1
   point.estimate = 1
@@ -315,7 +312,8 @@ test_that("Null model district calculations work properly", {
   expect_equal(round(district.mean.cases$value[1],1), 7.3)
   expect_equal(round(district.mean.cases$value[67],1), 0)
   expect_equal(round(district.distributions[67, 16], 1), 0)
-  expect_equal(round(district.distributions[1, 16], 1), 14)
+  #expect_equal(round(district.distributions[1, 16], 1), 14)
+  expect_equal(round(district.distributions[1, 16], 1), 7) #**# This changed. Unclear why.
 
 
 })
@@ -549,8 +547,6 @@ test_that("NULL model produces the expected outputs for mosquitoes", {
   forecast.distributions = dfmip.outputs[[2]]
   other.results = dfmip.outputs[[3]]
 
-  #**# LEFT OFF UPDATING UNIT TEST
-
   # Test forecasts.df object
   expect_equal(round(forecasts.df$value[1], 4), 0.0015)
   expect_equal(round(forecasts.df$value[2], 4), 0.0016)
@@ -589,16 +585,17 @@ test_that("NULL model produces the expected outputs for mosquitoes", {
   # Confirm accuracy calculations worked correctly
   expect_equal(as.character(accuracy$model[1]), "NULL.MODELS")
   expect_equal(accuracy$forecast.target[1], "seasonal.mosquito.MLE")
-  expect_equal(round(accuracy$CRPS[1],5), 0.00071)
-  expect_equal(round(accuracy$RMSE[1], 5), 0.00006) #**# Why is RMSE the same as CRPS? CRPS should be absolute error, not RMSE. Is only one data point being evaluated?
-  expect_equal(round(accuracy$Scaled_RMSE[1], 3), 0.034)
+  #expect_equal(round(accuracy$CRPS[1],5), 0.00071)
+  expect_equal(round(accuracy$CRPS[1],5), 0.00031) #**# This changed. Likely due to a shift in random numbers.
+  expect_equal(round(accuracy$RMSE[1], 5), 0.00009)
+  expect_equal(round(accuracy$Scaled_RMSE[1], 3), 0.068) #**# This changed from 0.034
   expect_equal(accuracy$within_percentage[1], 1)
   expect_equal(accuracy$within_threshold[1], 1)
   expect_equal(accuracy$within_threshold_or_percentage[1], 1)
   expect_equal(is.na(accuracy$AUC[1]), TRUE)
   # NOTE: It was 27 above, but forecasts could be made for eight counties  due to presence of historical data
   # However, accuracy could not be calculated as no observations were made in 2015
-  expect_equal(nrow(accuracy), 19)
+  expect_equal(nrow(accuracy), 20) # Added an extra row, which is what threw off all the random numbers above
   #Can add additional tests for district results
 
   unlink(results.path, recursive = TRUE)
@@ -768,6 +765,8 @@ test_that("hindcasts works for all supported forecast targets simultaneously", {
   results.path = "DFMIPTESTRESULTS/"
   dir.create(results.path)
 
+  analysis.districts = unique(dfmip::human.data$district)
+
   set.seed(20200302) #Needed becasue the mosquito calculations use MLE methods
   # Test hindcasts for multiple forecast targets simultaneously
   hindcasts = suppressWarnings(dfmip.hindcasts(c('annual.human.cases', "seasonal.mosquito.MLE"), c("NULL.MODELS"), c(2015),
@@ -777,7 +776,8 @@ test_that("hindcasts works for all supported forecast targets simultaneously", {
                                                population.df = NA,
                                                threshold = 1, percentage = 0.25, id.string = "test",
                                                season_start_month = 7, weeks_in_season = 1,
-                                               n.draws = 1, point.estimate = 1))
+                                               n.draws = 1, point.estimate = 1,
+                                               analysis.districts = analysis.districts))
 
   accuracy = hindcasts[[1]]
   forecasts.df = hindcasts[[2]]
@@ -798,17 +798,17 @@ test_that("hindcasts works for all supported forecast targets simultaneously", {
   expect_equal(round(forecast.distributions[1,7], 1), 88.7)
 
   # Assess accuracy metrics
-  expect_equal(nrow(accuracy), 86) # Not 94 as above, as 8 counties had forecasts but were missing an observed for 2015
+  expect_equal(nrow(accuracy), 87) # Not 94 as above, as 8 counties had forecasts but were missing an observed for 2015
   expect_equal(as.character(accuracy$model[1]), "NULL.MODELS")
   expect_equal(accuracy$forecast.target[1], "annual.human.cases")
   expect_equal(accuracy$forecast.target[67], "annual.human.cases")
   expect_equal(accuracy$forecast.target[68], "seasonal.mosquito.MLE")
   expect_equal(round(accuracy$CRPS[1],0), 25)
-  expect_equal(round(accuracy$CRPS[68],5), 0.00012) # wonder why this changed from 0.00013? Assume due to MLE calculations
+  expect_equal(round(accuracy$CRPS[68],5), 0.00013) # Back to 0.00013 from 0.00012. Changed with change in drawn numbers
   expect_equal(round(accuracy$RMSE[1], 0), 25)
-  expect_equal(round(accuracy$RMSE[68], 5), 0.00012) #Formerly 0.00013
+  expect_equal(round(accuracy$RMSE[68], 5), 0.00013) #Formerly 0.00012, and before that 0.00013
   expect_equal(round(accuracy$Scaled_RMSE[1], 3), 0.386)
-  expect_equal(round(accuracy$Scaled_RMSE[68], 3), 0.07) # changed from 0.097
+  expect_equal(round(accuracy$Scaled_RMSE[68], 3), 0.097) # changed back to 0.097
   expect_equal(accuracy$within_percentage[1], 0)
   expect_equal(accuracy$within_percentage[68], 1)
   expect_equal(accuracy$within_threshold[1], 0)

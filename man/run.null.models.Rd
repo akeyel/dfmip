@@ -6,7 +6,8 @@
 \usage{
 run.null.models(forecast.targets, forecasts.df, forecast.distributions,
   human.data, week.id, weekinquestion, n.draws, point.estimate,
-  mosq.data = NA, population.df = NA, model.name = "NULL.MODELS")
+  analysis.districts, mosq.data = NA, population.df = NA,
+  model.name = "NULL.MODELS")
 }
 \arguments{
 \item{forecast.targets}{See \code{\link{dfmip.forecast}}}
@@ -24,6 +25,8 @@ run.null.models(forecast.targets, forecasts.df, forecast.distributions,
 \item{n.draws}{The number of draws for the forecast distributions. Should be 1 if a point estimate is used, otherwise should be a large enough number to adequately represent the variation in the underlying data}
 
 \item{point.estimate}{Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.}
+
+\item{analysis.districts}{Districts to include in the analysis. This may include districts with no human cases that would otherwise be dropped from the modeling.}
 
 \item{mosq.data}{Only required if a mosquito output is among the forecast targets. See \code{\link{dfmip.forecast}}}
 

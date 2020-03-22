@@ -7,7 +7,8 @@
 dfmip.forecast(forecast.targets, models.to.run, human.data, mosq.data,
   weather.data, weekinquestion, week.id, results.path,
   model.inputs = list(), population.df = "none", n.draws = 1000,
-  point.estimate = 0, is.test = FALSE)
+  point.estimate = 0, analysis.districts = "default",
+  is.test = FALSE)
 }
 \arguments{
 \item{forecast.targets}{The quantities for which hindcasts are to be made. Options are: \tabular{ll}{
@@ -46,6 +47,8 @@ rf1.inputs \tab Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}.\
 \item{n.draws}{The number of draws for the forecast distributions. Should generally be 1 if a point estimate is used, otherwise should be a large enough number to adequately represent the variation in the underlying data}
 
 \item{point.estimate}{Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.}
+
+\item{analysis.districts}{Districts to include in the analysis. This may include districts with no human cases that would otherwise be dropped from the modeling.}
 
 \item{is.test}{Default is FALSE (runs all models). If set to TRUE, saved results will be used for the Random Forest model. For testing purposes only.}
 }
