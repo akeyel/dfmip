@@ -98,7 +98,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
                      analysis.districts = 'default', is.test = FALSE){
 
   # Check that models to run are all valid model names
-  models.in.dfmip = c("NULL.MODELS", "ArboMAP", "ArboMAP.MOD", "RF1_C", "RF1_A")
+  models.in.dfmip = c("NULL.MODELS", "ArboMAP", "ArboMAP.MOD", "RF1_C", "RF1_A", "FLM")
   check.models(models.to.run, models.in.dfmip)
 
   # Check which models support the selected forecast targets
@@ -112,8 +112,12 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
   # Restrict data analysis to analysis.districts
   human.data =   human.data[as.character(human.data$district) %in% analysis.districts, ]
-  mosq.data = mosq.data[as.character(mosq.data$district) %in% analysis.districts, ]
-  weather.data = weather.data[as.character(weather.data$district) %in% analysis.districts, ]
+  if (!is.na(mosq.data)){
+    mosq.data = mosq.data[as.character(mosq.data$district) %in% analysis.districts, ]
+  }
+  if (!is.na(weather.data)){
+    weather.data = weather.data[as.character(weather.data$district) %in% analysis.districts, ]
+  }
 
   # Initialize the forecast object
   forecasts.df = NA
@@ -250,7 +254,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
     # Set up the sub-model output results
     rf1.results.path = sprintf("%s/rf1_results", results.path)
-    if (!file.exists(rf1.results.path)){ dir.create((rf1.results.path))  }
+    if (!file.exists(rf1.results.path)){ dir.create(rf1.results.path, recursive = TRUE)  }
 
     # Create a new rf1.inputs object and clear any added inputs
     rf1.inputs.no.extras = model.inputs[['rf1.inputs']]
@@ -313,7 +317,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
     # Set up the sub-model output results
     rf1.results.path = sprintf("%s/rf1_results", results.path)
-    if (!file.exists(rf1.results.path)){ dir.create((rf1.results.path))  }
+    if (!file.exists(rf1.results.path)){ dir.create(rf1.results.path, recursive = TRUE)  }
 
     RF1.out = rf1::rf1(forecast.targets, human.data, mosq.data, weather.data,
                       weekinquestion, rf1.inputs, rf1.results.path, UNIT,
@@ -339,6 +343,58 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     # Add data columns to the new data frame
     RF1.distribution.records = cbind(RF1.distribution.records, RF1.forecast.distributions[ ,3:(n.draws + 2)])
     forecast.distributions = update.distribution2(forecast.distributions, RF1.distribution.records)
+  }
+
+  # Run the Functional Linear Modeling approach
+  if ("FLM" %in% models.to.run){
+
+    # Check that package is installed
+    my.package = "flm" #"flm_NE_WNV"
+    package.path = 'khelmsmith/flm_NE_WNV'
+    if(!requireNamespace(my.package)){
+      stop(sprintf('%s package must be installed. You can do this with devtools::install_github("%s")', my.package, package.path))
+    }
+
+    message("Running Functional Linear Modeling model")
+
+    # Set up the sub-model output results
+    model.results.path = sprintf("%s/%s_results", results.path, my.package)
+    if (!file.exists(model.results.path)){ dir.create(model.results.path, recursive = TRUE)  }
+
+    flm.inputs = model.inputs$flm.inputs
+
+    flm.out = run.flm(human.data, weather.data, flm.inputs, weekinquestion,
+                      results.path, analysis.districts,
+                      in.seed = 4872957)
+
+    flm.results = flm.out[[1]]
+    flm.distributions = flm.out[[1]] #**# Change to 2 when that object is created
+    other.outputs$flm = flm.out[[3]]
+
+    # Update Results and Distribution objects with output from the Random Forest model (both forecast targets come out merged)
+    this.model.name = my.package
+    model.forecast.id = sprintf("%s:%s", week.id, flm.results$County)
+    #**# annual.human.cases is currently the only forecast target supported. if another is added, the below will need to be changed
+    flm.records = data.frame(model.name = this.model.name, forecast.id = model.forecast.id,
+                             forecast.target = 'annual.human.cases',
+                             UNIT = UNIT, date = date, year = year, value = flm.results$predcases)
+
+    forecasts.df = update.df2(forecasts.df, flm.records)
+
+    # Add zeros for counties that never had a human case, using analysis.districts
+    warning("Still need to add zeros to flm for counties that never had a human case of WNV")
+
+    flm.distribution.records = data.frame(model.name = this.model.name, forecast.id = model.forecast.id,
+                                          forecast.target = 'annual.human.cases',
+                                          UNIT = UNIT, date = date, year = year)
+    # Add data columns to the new data frame. At present, this is just the point estimate repeated n.draws times
+    #**# change when going from a point estimate to probabilisic estimates
+    for (i in seq_len(n.draws)){
+      flm.distribution.records = cbind(flm.distribution.records, flm.results$predcases)
+    }
+    draw.names = sprintf("DRAW%s", seq(1,n.draws))
+    colnames(flm.distribution.records) = c("model.name", "forecast.id", "forecast.target", "UNIT", "date", "year", draw.names)
+    forecast.distributions = update.distribution2(forecast.distributions, flm.distribution.records)
   }
 
   # Make sure forecasts.targets are not converted to factor
@@ -471,8 +527,12 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
 
   # Restrict data analysis to analysis.districts
   human.data =   human.data[as.character(human.data$district) %in% analysis.districts, ]
-  mosq.data = mosq.data[as.character(mosq.data$district) %in% analysis.districts, ]
-  weather.data = weather.data[as.character(weather.data$district) %in% analysis.districts, ]
+  if (!is.na(mosq.data)){
+    mosq.data = mosq.data[as.character(mosq.data$district) %in% analysis.districts, ]
+  }
+  if (!is.na(weather.data)){
+    weather.data = weather.data[as.character(weather.data$district) %in% analysis.districts, ]
+  }
 
   # Data frame to hold outputs
   observations.df = data.frame(district = NA, year = NA, district_year = NA, forecast.target = NA, value = NA)
@@ -507,7 +567,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
     # Format data to ensure compatibility with code below
     #human.data$year = sapply(as.character(human.data$date), splitter,  "/", 3)
     human.data$year = vapply(as.character(human.data$date), splitter, FUN.VALUE = numeric(1),  "/", 3)
-    mosq.data$date = mosq.data$col_date
+    if (!is.na(mosq.data)){  mosq.data$date = mosq.data$col_date  }
 
     # Calculate the observed values for the year
     if ("annual.human.cases" %in% forecast.targets){
@@ -538,10 +598,14 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
       #**# Human data are not used in making a prediction for a new year, so if getting no rows for the forecast year, check weather and mosquitoes
 
       # Subset the mosquito data object
-      mosq.data.subset = date.subset(mosq.data, year, month, day, 2)
+      if(!is.na(mosq.data)){
+        mosq.data.subset = date.subset(mosq.data, year, month, day, 2)
+      }else{ mosq.data.subset = NA  }
 
       # Subset the weather data object
-      weather.data.subset = date.subset(weather.data, year, month, day, 1)
+      if (!is.na(weather.data)){
+        weather.data.subset = date.subset(weather.data, year, month, day, 1)
+      }else{ weather.data.subset = NA  }
 
       # Run analysis for selected weeks
       in.date = sprintf("%s-%02d-%02d", year, month, day)
@@ -1831,8 +1895,7 @@ check.models.and.targets = function(models.to.run, forecast.targets){
   ahc = 'annual.human.cases'
   smMLE = 'seasonal.mosquito.MLE'
 
-  # ArboMAP
-  arbomap.supported.targets = c(ahc)
+  supported.targets = NA
 
   for (model in models.to.run){
     for (target in forecast.targets){
@@ -1841,7 +1904,7 @@ check.models.and.targets = function(models.to.run, forecast.targets){
         supported.targets = c(ahc, smMLE)
       }
 
-      if (model == "ArboMAP" | model == "ArboMAP.MOD"){
+      if (model == "ArboMAP" | model == "ArboMAP.MOD" | model == "FLM"){
         supported.targets = c(ahc)
       }
 
@@ -2176,4 +2239,64 @@ configure.analysis.districts = function(analysis.districts, forecast.targets, hu
   analysis.districts = as.character(analysis.districts)
   return(analysis.districts)
 }
+
+#' Expand human data
+#'
+#' Takes human cases from a single row for each county and year, and adds individual rows for each county reporting cases
+#' I.e. converts it into the format used by dfmip. This is unfortunate, as ArboMAP is the only model that requires the
+#' detailed format, and this is not suitable for ArboMAP, as the dates are not accurate. However, it enables a common
+#' workflow for all models, and that is highly desirable (i.e. the goal of the project)
+#'
+#' @param cases Human cases summarized by district and year
+#'
+#' @return human.data Data in the standardized dfmip input format, with a column for date, and a column for district.
+#' District-years with no cases are omitted, consequently an assumption of no missing data within years is made.
+#'
+#' @export
+expand.human.data = function(cases, arbitrary.date = "08-01", case.field = "count", year.field = 'year', district.field = 'district'){
+
+  #**# May want to add an optional field mapping, to allow users to input their own column names
+
+  # Create human.data object
+  human.data = data.frame(date = NA, district = NA)
+
+  years = unique(cases[[year.field]])
+  districts = unique(cases[[district.field]])
+
+  # Loop through years
+  for (year in years){
+    year.subset = cases[cases[[year.field]] == year, ]
+
+    # Loop through districts
+    for (district in districts){
+
+      district.subset = year.subset[year.subset[[district.field]] == district, ]
+
+      # Check that one or no rows are selected, otherwise throw an error
+      if (nrow(district.subset) > 1){
+        m1 = sprintf("More than one result found for a district and a year (%s rows).", nrow(district.subset))
+        m2 = sprintf("Please inspect data for district %s and year %s", district, year)
+        stop(sprintf("%s%s", m1, m2))
+      }
+
+      # If nrow == 0, no action needed, just skip that district-year
+      if (nrow(district.subset) == 1){
+        # Fill in human.data object
+        n.cases = district.subset[[case.field]][1]
+        for (i in seq_len(n.cases)){
+          new.date = sprintf("%s-%s", year, arbitrary.date)
+          new.record = c(new.date, district)
+          human.data = rbind(human.data, new.record)
+        }
+      }
+    }
+  }
+
+  # Remove first NA row
+  human.data = human.data[2:nrow(human.data), ]
+
+  return(human.data)
+}
+
+
 
