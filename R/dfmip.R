@@ -363,9 +363,8 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
     flm.inputs = model.inputs$flm.inputs
 
-    flm.out = run.flm(human.data, weather.data, flm.inputs, weekinquestion,
-                      results.path, analysis.districts,
-                      in.seed = 4872957)
+    flm.out = flm::run.flm(human.data, weather.data, flm.inputs, weekinquestion,
+                      results.path, in.seed = 4872957)
 
     flm.results = flm.out[[1]]
     flm.distributions = flm.out[[1]] #**# Change to 2 when that object is created
@@ -2248,6 +2247,10 @@ configure.analysis.districts = function(analysis.districts, forecast.targets, hu
 #' workflow for all models, and that is highly desirable (i.e. the goal of the project)
 #'
 #' @param cases Human cases summarized by district and year
+#' @param arbitrary.date The month and day to fill into the returned date field. This will be the same for all entries
+#' @param case.field The field containing counts of human cases
+#' @param year.field The field containing the year of the human cases
+#' @param district.field The field containing the spatial extent of the human cases (e.g., county)
 #'
 #' @return human.data Data in the standardized dfmip input format, with a column for date, and a column for district.
 #' District-years with no cases are omitted, consequently an assumption of no missing data within years is made.
