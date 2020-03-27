@@ -351,7 +351,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     # Check that package is installed
     my.package = "flm" #"flm_NE_WNV"
     package.path = 'khelmsmith/flm_NE_WNV'
-    if(!requireNamespace(my.package)){
+    if(!requireNamespace('flm')){
       stop(sprintf('%s package must be installed. You can do this with devtools::install_github("%s")', my.package, package.path))
     }
 
