@@ -878,3 +878,23 @@ test_that("Configure analysis function works", {
   expect_equal(analysis.districts, c('g','h','i'))
 
 })
+
+# Test expand.human.data function
+test_that("expand.human.data function works as expected", {
+
+  cases = data.frame(district = c('a','b','c','d'), year = sort(rep(c(2001,2002),4)), count = c(0,1,2,3,4,0,1,3))
+
+  human.data = expand.human.data(cases, arbitrary.date = "08-01", case.field = "count", year.field = 'year', district.field = 'district')
+
+  expect_equal(nrow(human.data), 14)
+  expect_equal(nrow(human.data[human.data$district == 'd', ]), 6)
+  expect_equal(nrow(human.data[human.data$district == 'a', ]), 4)
+
+  # Check that an omitted input row is actually omitted from output without error
+  cases = cases[1:7, ]
+  human.data = expand.human.data(cases, arbitrary.date = "08-01", case.field = "count", year.field = 'year', district.field = 'district')
+  expect_equal(nrow(human.data), 11)
+  expect_equal(nrow(human.data[human.data$district == 'd', ]), 3)
+  expect_equal(nrow(human.data[human.data$district == 'a', ]), 4)
+
+})
