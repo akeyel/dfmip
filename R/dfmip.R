@@ -112,10 +112,10 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
   # Restrict data analysis to analysis.districts
   human.data =   human.data[as.character(human.data$district) %in% analysis.districts, ]
-  if (!is.na(mosq.data)){
+  if (!length(mosq.data) == 1){
     mosq.data = mosq.data[as.character(mosq.data$district) %in% analysis.districts, ]
   }
-  if (!is.na(weather.data)){
+  if (!length(weather.data) == 1){
     weather.data = weather.data[as.character(weather.data$district) %in% analysis.districts, ]
   }
 
@@ -526,10 +526,11 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
 
   # Restrict data analysis to analysis.districts
   human.data =   human.data[as.character(human.data$district) %in% analysis.districts, ]
-  if (!is.na(mosq.data)){
+  # Length == 1 corresponds to NA. Cannot use is.na() because if it the data set, R throws a warning that the condition length is >1
+  if (!length(mosq.data) == 1){
     mosq.data = mosq.data[as.character(mosq.data$district) %in% analysis.districts, ]
   }
-  if (!is.na(weather.data)){
+  if (!length(weather.data) == 1){
     weather.data = weather.data[as.character(weather.data$district) %in% analysis.districts, ]
   }
 
@@ -566,7 +567,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
     # Format data to ensure compatibility with code below
     #human.data$year = sapply(as.character(human.data$date), splitter,  "/", 3)
     human.data$year = vapply(as.character(human.data$date), splitter, FUN.VALUE = numeric(1),  "/", 3)
-    if (!is.na(mosq.data)){  mosq.data$date = mosq.data$col_date  }
+    if (!length(mosq.data) == 1){  mosq.data$date = mosq.data$col_date  }
 
     # Calculate the observed values for the year
     if ("annual.human.cases" %in% forecast.targets){
@@ -597,12 +598,12 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
       #**# Human data are not used in making a prediction for a new year, so if getting no rows for the forecast year, check weather and mosquitoes
 
       # Subset the mosquito data object
-      if(!is.na(mosq.data)){
+      if(!length(mosq.data) == 1){
         mosq.data.subset = date.subset(mosq.data, year, month, day, 2)
       }else{ mosq.data.subset = NA  }
 
       # Subset the weather data object
-      if (!is.na(weather.data)){
+      if (!length(weather.data) == 1){
         weather.data.subset = date.subset(weather.data, year, month, day, 1)
       }else{ weather.data.subset = NA  }
 
