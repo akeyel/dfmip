@@ -479,6 +479,7 @@ test_that("NULL model produces the expected outputs", {
 
   #skip('Do not do hind casts until forecasts work')
   # Test ArboMAP hindcasts for human cases
+  set.seed(20200328)
   hindcasts = suppressWarnings(dfmip.hindcasts(c("annual.human.cases"), c("NULL.MODELS"), c(2015), human.data, mosq.data,
                                                weather.data, results.path, model.inputs = NA,
                                                population.df = NA,
@@ -500,22 +501,27 @@ test_that("NULL model produces the expected outputs", {
   expect_equal(round(forecasts.df$value[67], 1), 4.4)
   expect_equal(round(forecasts.df$value[30], 1), 0.5)
 
-  expect_equal(round(forecast.distributions[1,7], 1), 46)
+  expect_equal(round(forecast.distributions[1,7], 1), 41) # Formerly 46. Odd that that would change (no, I changed the start seed, so this makes sense)
   expect_equal(nrow(forecast.distributions), 67)
   expect_equal(ncol(forecast.distributions), 1006)
   #**# Could add additional unit tests here
 
   # Test accuracy calculations
+  expect_equal(nrow(accuracy), 402)
   expect_equal(as.character(accuracy$model[1]), "NULL.MODELS")
   expect_equal(accuracy$forecast.target[1], "annual.human.cases")
-  expect_equal(round(accuracy$CRPS[1],1), 21.1)
-  expect_equal(round(accuracy$RMSE[1], 1), 26.3)
-  expect_equal(round(accuracy$Scaled_RMSE[1], 3), 0.411)
-  expect_equal(accuracy$within_percentage[1], 0)
-  expect_equal(accuracy$within_threshold[1], 0)
-  expect_equal(accuracy$within_threshold_or_percentage[1], 0)
-  expect_equal(is.na(accuracy$AUC[1]), TRUE)
-  expect_equal(nrow(accuracy), 67)
+  expect_equal(accuracy$metric[6], "CRPS")
+  expect_equal(round(accuracy$value[6],1), 20.4) # Changed to 20.4 from 21.1. This is the problem with random processes, when things get changed in the order in which random numbers are drawn
+  expect_equal(accuracy$metric[1], "RMSE")
+  expect_equal(round(accuracy$value[1], 1), 57.3) # RMSE of 57.3 instead of 26.3 now. Numbers seem plausible though, as eyeballing the results, the estimates range from 27 to 154
+  expect_equal(accuracy$metric[2], "Scaled_RMSE")
+  expect_equal(round(accuracy$value[2], 3), 0.895) # Formerly: 0.411
+  expect_equal(accuracy$metric[3], "within_percentage")
+  expect_equal(accuracy$value[3], 0.172)
+  expect_equal(accuracy$metric[4], 'within_threshold')
+  expect_equal(accuracy$value[4], 0)
+  expect_equal(accuracy$metric[5], "within_threshold_or_percentage")
+  expect_equal(accuracy$value[5], 0.172)
   #**# Can add additional district unit tests
 
   unlink(results.path, recursive = TRUE)
@@ -586,16 +592,15 @@ test_that("NULL model produces the expected outputs for mosquitoes", {
   expect_equal(as.character(accuracy$model[1]), "NULL.MODELS")
   expect_equal(accuracy$forecast.target[1], "seasonal.mosquito.MLE")
   #expect_equal(round(accuracy$CRPS[1],5), 0.00071)
-  expect_equal(round(accuracy$CRPS[1],5), 0.00031) #**# This changed. Likely due to a shift in random numbers.
-  expect_equal(round(accuracy$RMSE[1], 5), 0.00009)
-  expect_equal(round(accuracy$Scaled_RMSE[1], 3), 0.068) #**# This changed from 0.034
-  expect_equal(accuracy$within_percentage[1], 1)
-  expect_equal(accuracy$within_threshold[1], 1)
-  expect_equal(accuracy$within_threshold_or_percentage[1], 1)
-  expect_equal(is.na(accuracy$AUC[1]), TRUE)
-  # NOTE: It was 27 above, but forecasts could be made for eight counties  due to presence of historical data
+  expect_equal(round(accuracy$value[6],5), 0.00031) #**# This changed. Likely due to a shift in random numbers.
+  expect_equal(round(accuracy$value[1], 5), 0.00117) # Changed to 0.00117
+  expect_equal(round(accuracy$value[2], 3), 0.872) #**# This changed from 0.034, and then from 0.068
+  expect_equal(accuracy$value[3], 0.175) # Changed from 1
+  expect_equal(accuracy$value[4], 1)
+  expect_equal(accuracy$value[5], 1)
+  # NOTE: It was 402 above, but forecasts could be made for eight counties  due to presence of historical data
   # However, accuracy could not be calculated as no observations were made in 2015
-  expect_equal(nrow(accuracy), 20) # Added an extra row, which is what threw off all the random numbers above
+  expect_equal(nrow(accuracy), 120)
   #Can add additional tests for district results
 
   unlink(results.path, recursive = TRUE)
@@ -714,16 +719,15 @@ test_that("DFMIP interfaces properly with the RF1 model", {
   expect_equal(ncol(forecast.distributions), 1006)
 
   # Test accuracy
+  expect_equal(nrow(accuracy), 30)
   expect_equal(as.character(accuracy$model[1]), "RF1_C")
   expect_equal(accuracy$forecast.target[5], "annual.human.cases")
-  expect_equal(round(accuracy$CRPS[2],1), 0.8)
-  expect_equal(round(accuracy$RMSE[5], 2), 0.11)
-  expect_equal(round(accuracy$Scaled_RMSE[3], 3), 0.071)
-  expect_equal(accuracy$within_percentage[1], 1)
-  expect_equal(accuracy$within_threshold[2], 1)
-  expect_equal(accuracy$within_threshold_or_percentage[3], 1)
-  expect_equal(is.na(accuracy$AUC[1]), TRUE)
-
+  expect_equal(round(accuracy$value[12],1), 0.8)
+  expect_equal(round(accuracy$value[25], 2), 0.88) # Formerly 0.11
+  expect_equal(round(accuracy$value[14], 3), 0.266) # Formerly 0.071
+  expect_equal(accuracy$value[3], 0.929) # Formerly 1
+  expect_equal(accuracy$value[10], 1)
+  expect_equal(accuracy$value[10], 1)
 
   ## KNOWN ERRORS
   # This is here to show that these are known errors, even if a more informative error message is desirable.
@@ -798,23 +802,22 @@ test_that("hindcasts works for all supported forecast targets simultaneously", {
   expect_equal(round(forecast.distributions[1,7], 1), 88.7)
 
   # Assess accuracy metrics
-  expect_equal(nrow(accuracy), 87) # Not 94 as above, as 8 counties had forecasts but were missing an observed for 2015
+  expect_equal(nrow(accuracy), 522) # Not 94 (times 6) as above, as 8 counties had forecasts but were missing an observed for 2015
   expect_equal(as.character(accuracy$model[1]), "NULL.MODELS")
   expect_equal(accuracy$forecast.target[1], "annual.human.cases")
-  expect_equal(accuracy$forecast.target[67], "annual.human.cases")
-  expect_equal(accuracy$forecast.target[68], "seasonal.mosquito.MLE")
-  expect_equal(round(accuracy$CRPS[1],0), 25)
-  expect_equal(round(accuracy$CRPS[68],5), 0.00013) # Back to 0.00013 from 0.00012. Changed with change in drawn numbers
-  expect_equal(round(accuracy$RMSE[1], 0), 25)
-  expect_equal(round(accuracy$RMSE[68], 5), 0.00013) #Formerly 0.00012, and before that 0.00013
-  expect_equal(round(accuracy$Scaled_RMSE[1], 3), 0.386)
-  expect_equal(round(accuracy$Scaled_RMSE[68], 3), 0.097) # changed back to 0.097
-  expect_equal(accuracy$within_percentage[1], 0)
-  expect_equal(accuracy$within_percentage[68], 1)
-  expect_equal(accuracy$within_threshold[1], 0)
-  expect_equal(accuracy$within_threshold[68], 1)
-  expect_equal(accuracy$within_threshold_or_percentage[68], 1)
-  expect_equal(is.na(accuracy$AUC[1]), TRUE)
+  expect_equal(accuracy$forecast.target[402], "annual.human.cases")
+  expect_equal(accuracy$forecast.target[403], "seasonal.mosquito.MLE")
+  expect_equal(round(accuracy$value[6],0), 25)
+  expect_equal(round(accuracy$value[408],5), 0.00013) # Back to 0.00013 from 0.00012. Changed with change in drawn numbers
+  expect_equal(round(accuracy$value[1], 0), 25)
+  expect_equal(round(accuracy$value[403], 5), 0.00013) #Formerly 0.00012, and before that 0.00013
+  expect_equal(round(accuracy$value[2], 3), 0.386)
+  expect_equal(round(accuracy$value[404], 3), 0.097) # changed back to 0.097
+  expect_equal(accuracy$value[3], 0)
+  expect_equal(accuracy$value[405], 1)
+  expect_equal(accuracy$value[4], 0)
+  expect_equal(accuracy$value[406], 1)
+  expect_equal(accuracy$value[407], 1)
 
   unlink(results.path, recursive = TRUE)
 })

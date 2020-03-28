@@ -26,8 +26,11 @@ NULL
 #'  probabilistic forecasts, there will likely be a thousand or more columns.
 #'  Note that these are realizations, and not the probabilities associated with
 #'  categories.
-#'@param observations.vec A vector where each entry corresponds to the observed outcome for the corresponding row in predictions.mat.
-#'@param forecast.target The quantity being forecast. Forecasts targets are: \itemize{
+#' @param observations.vec A vector where each entry corresponds to the observed outcome for the corresponding row in predictions.mat.
+#' @param model.vec A vector indicating which model is being evaluated
+#' @param locations.vec A vector giving the location corresponding to each entry in observations.vec
+#' @param year.vec A vector giving the year corresponding toeach entry in observations.vec
+#' @param forecast.target The quantity being forecast. Forecasts targets are: \itemize{
 #' \item annual.human.cases
 #' \item human_incidence
 #' \item seasonal.mosquito.MLE
@@ -36,10 +39,10 @@ NULL
 #' \item human_cases_binary
 #' \item positive_pools_binary
 #' \item peak_timing }
-#'@param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate".
-#'@param percentage For continuous and discrete forecasts, if the prediction is within the specified percentage of the observed value, the forecast is considered accurate.
+#' @param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate".
+#' @param percentage For continuous and discrete forecasts, if the prediction is within the specified percentage of the observed value, the forecast is considered accurate.
 #'
-#'@return accuracy.metrics A list containing accuracy information. The list is
+#' @return accuracy.metrics A list containing accuracy information. The list is
 #'   structured \tabular{ll}{
 #'   RMSE \tab Root Mean Squared Error\cr
 #'   Scaled_RMSE \tab RMSE scaled by the mean observed value\cr
@@ -50,10 +53,13 @@ NULL
 #'   }
 #'
 #' @examples
-#' assess.accuracy(matrix(rnorm(1000, 8, 1), ncol = 1), rnorm(1000, 8, 1), "seasonal.mosquito.MLE")
+#' mat = matrix(rnorm(1000, 8, 1), ncol = 1)
+#' obs = rnorm(1000, 8, 1)
+#' assess.accuracy(mat, obs, c("TEST"), c("Test"), c(2015), "seasonal.mosquito.MLE")
 #'
 #' @export assess.accuracy
-assess.accuracy = function(predictions.mat, observations.vec, forecast.target, threshold = 'default', percentage = 'default'){
+assess.accuracy = function(predictions.mat, observations.vec, model.vec, locations.vec, year.vec,
+                           forecast.target, threshold = 'default', percentage = 'default'){
 
   # List of potential options #**# UPDATE DOCUMENTATION WITH THESE
   #forecast.targets = c("annual.human.cases", "human_incidence", "seasonal.mosquito.MLE",
@@ -71,8 +77,10 @@ assess.accuracy = function(predictions.mat, observations.vec, forecast.target, t
     stop(sprintf("%s is not a valid forecast target. Valid options are %s.", forecast.target, paste(forecast.targets, collapse = ', ')))
   }
 
-  accuracy.metrics = list(CRPS = NA, RMSE = NA, Scaled_RMSE = NA, within_percentage = NA,
-                          within_threshold = NA, within_threshold_or_percentage = NA, AUC = NA)
+  # Create a data frame to hold accuracy metric results
+  accuracy.metrics = data.frame(model = NA, district = NA, forecast.target, metric = NA, year = NA, value = NA)
+  #accuracy.metrics = list(CRPS = NA, RMSE = NA, Scaled_RMSE = NA, within_percentage = NA,
+  #                        within_threshold = NA, within_threshold_or_percentage = NA, AUC = NA)
 
   # set up threshold and percentage defaults
   t.and.p = setup.t.p.defaults(forecast.target, threshold, percentage,
@@ -91,14 +99,20 @@ assess.accuracy = function(predictions.mat, observations.vec, forecast.target, t
   # If forecast target is continuous
   if (forecast.target %in% continuous.targets){
     # Update RMSE, Scaled RMSE, percentage, threshold, threshold & percentage, CRPS
-    accuracy.metrics = try(update.continuous.targets(accuracy.metrics, predictions.mat, observations.vec, threshold, percentage))
+    accuracy.metrics = try(update.continuous.targets.v2(accuracy.metrics, predictions.mat,
+                                                        observations.vec, model.vec,
+                                                        locations.vec, year.vec,
+                                                        threshold, percentage, forecast.target))
   }
 
   #**# Does this require special handling, due to the discrete nature?
   # If forecast target is discrete
   if (forecast.target %in% discrete.targets){
     # Update RMSE, scaled RMSE, percentage, threshold, threshold & percentage, CRPS
-    accuracy.metrics = try(update.continuous.targets(accuracy.metrics, predictions.mat, observations.vec, threshold, percentage))
+    accuracy.metrics = try(update.continuous.targets.v2(accuracy.metrics, predictions.mat,
+                                                        observations.vec, model.vec,
+                                                        locations.vec, year.vec,
+                                                        threshold, percentage, forecast.target))
   }
 
   # If forecast target is a time interval
@@ -107,6 +121,9 @@ assess.accuracy = function(predictions.mat, observations.vec, forecast.target, t
     accuracy.metrics = try(update.time.targets(accuracy.metrics, predictions.mat, observations.vec, threshold))
 
   }
+
+  # Remove 1st NA row
+  accuracy.metrics = accuracy.metrics[2:nrow(accuracy.metrics), ]
 
   return(accuracy.metrics)
 }
@@ -172,7 +189,95 @@ setup.t.p.defaults = function(forecast.target, threshold, percentage,
   return(list(threshold, percentage))
 }
 
+#' Update the continuous accuracy targets v2
+#'
+#' Updated to produce a data frame containing all accuracy metrics, including individual values for each year instead of summary means
+#'
+#' @param accuracy.metrics A list containing accuracy information. The list is
+#'   structured \tabular{ll}{
+#'   RMSE \tab Root Mean Squared Error\cr
+#'   Scaled_RMSE \tab RMSE scaled by the mean observed value\cr
+#'   within_percentage \tab A binary accuracy classification, where a forecast within a specified percentage of the observation is considered accurate, otherwise it is inaccurate.\cr
+#'   within_threshold \tab A binary accuracy classification, where a forecast within a specified threshold from the observation is considered accurate, otherwise it is inaccurate\cr
+#'   within_threshold_or_percentage \tab A binary accuracy classification, where if it is accurate by either the threshold or percentage approaches, it is considered accurate.\cr
+#'   AUC \tab Area Under the Curve from the Receiver Operating Characteristic Plot\cr
+#'   }
+#' @param predictions.mat A matrix where each row corresponds to a separate
+#'  forecast, and every column corresponds to a forecast realization. In the
+#'  case of point forecasts, there will be a single column. In the case of
+#'  probabilistic forecasts, there will likely be a thousand or more columns.
+#'  Note that these are realizations, and not the probabilities associated with
+#'  categories.
+#' @param observations.vec A vector where each entry corresponds to the observed outcome for the corresponding row in predictions.mat.
+#' @param model.vec A vector indicating which model is being evaluated
+#' @param locations.vec A vector giving the location corresponding to each entry in observations.vec
+#' @param year.vec A vector giving the year corresponding toeach entry in observations.vec
+#' @param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.
+#' @param percentage For continuous and discrete forecasts, if the prediction is within the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.
+#'
+#' @return accuracy.metrics An updated accuracy.metrics object
+#'
+#' @noRd
+#'
+update.continuous.targets.v2 = function(accuracy.metrics, predictions.mat, observations.vec,
+                                        model.vec, locations.vec, year.vec, threshold, percentage,
+                                        forecast.target){
+
+  #**# No formal check that predictions.mat and observations.vec have the same number of entries
+  # However, they both come from the same data frame in the evaluate.accuracy function
+
+  # Loop through each entry in predictions.mat and observation.vec
+  for (i in seq_len(length(observations.vec))){
+    obs = observations.vec[i]
+    dat = predictions.mat[i , ]
+    loc = locations.vec[i]
+    year = year.vec[i]
+    model = model.vec[i]
+
+    # Update RMSE
+    #message(sprintf("Obs: %s, Data: %s", obs, paste(dat, collapse = ", ")))
+    this.RMSE = caret::RMSE(dat, obs)
+    accuracy.metrics = rbind(accuracy.metrics, c(model, loc,  forecast.target, "RMSE", year, this.RMSE))
+    #message("Got Here")
+
+    # Update scaled RMSE
+    scaled.RMSE = this.RMSE / mean(observations.vec, na.rm = TRUE)
+    accuracy.metrics = rbind(accuracy.metrics, c(model, loc, forecast.target, "Scaled_RMSE", year, scaled.RMSE))
+
+    # Update percentage score
+    percent.error = dat / obs
+    correct.index = percent.error < (percentage + 1) & percent.error > (1 - percentage)
+    correct.vec = rep(0, length(percent.error))
+    correct.vec[correct.index] = 1
+    accuracy.score = sum(correct.vec, na.rm = TRUE) / length(correct.vec)
+    accuracy.metrics = rbind(accuracy.metrics, c(model, loc, forecast.target, "within_percentage", year, accuracy.score))
+
+    # Update threshold score
+    threshold.errors = abs(dat - obs)
+    t.correct.index = threshold.errors <= threshold
+    t.correct.vec = rep(0, length(threshold.errors))
+    t.correct.vec[t.correct.index] = 1
+    t.accuracy.score = sum(t.correct.vec, na.rm = TRUE) / length(t.correct.vec)
+    accuracy.metrics = rbind(accuracy.metrics, c(model, loc, forecast.target, "within_threshold", year, t.accuracy.score))
+
+    # Update threshold & percentage scores
+    t.p.correct.index = t.correct.index | correct.index
+    t.p.accuracy.score = sum(t.p.correct.index) / length(t.p.correct.index) #**# This should be more concise - TRUE = 1, FALSE = 0.
+    accuracy.metrics = rbind(accuracy.metrics, c(model, loc, forecast.target, "within_threshold_or_percentage", year, t.p.accuracy.score))
+
+    # Update CRPS
+    crps = crps_sample(obs, dat)
+    accuracy.metrics = rbind(accuracy.metrics, c(model, loc, forecast.target, "CRPS", year, crps))
+    #message("Also here")
+  }
+
+  return(accuracy.metrics)
+}
+
+
 #' Update the continuous accuracy targets
+#'
+#' OLD VERSION, NO LONGER IN USE
 #'
 #' @param accuracy.metrics A list containing accuracy information. The list is
 #'   structured \tabular{ll}{

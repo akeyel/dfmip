@@ -684,9 +684,7 @@ evaluate.accuracy = function(models.to.run, forecast.distributions, forecast.tar
                              threshold = 'default', percentage = 'default'){
 
   # Create accuracy summary object
-  accuracy.summary = data.frame(model = NA, district = NA, forecast.target = NA,
-                                CRPS = NA, RMSE = NA, Scaled_RMSE = NA, within_percentage = NA,
-                                within_threshold = NA, within_threshold_or_percentage = NA, AUC = NA)
+  accuracy.summary = data.frame(model = NA, district = NA, forecast.target = NA, metric = NA, year = NA, value = NA)
 
   # Add district and district_years field to forecast.distributions for merging with observations.df and subsetting by district
   #**# NOTE: probably should add these fields permanently, but I did not want to make upstream edits or redo the unit tests
@@ -751,28 +749,24 @@ evaluate.accuracy = function(models.to.run, forecast.distributions, forecast.tar
           # Observations will be added with the field name 'value', so this should just correspond to observations in the same order
           observations.vec = as.numeric(as.character(dist.subset$value))
 
+          # Locations will just be the same district, as we have already subset to that
+          locations.vec = rep(district, length(observations.vec))
+
+          # Years come from year column
+          year.vec = dist.subset$year.x #year.x following the merge
+          if (length(year.vec) == 0){stop(sprintf("No entries for year.vec, dist subset fields are: %s", paste(names(dist.subset), collapse = ", ")))}
+
+          # Models will just come from the model, as we already subset to that
+          model.vec = rep(model, length(observations.vec))
+
           # Assess hindcast accuracy for each target
-          target.accuracy.metrics = assess.accuracy(model.forecast.distributions, observations.vec, forecast.target, threshold, percentage)
+          target.accuracy.metrics = assess.accuracy(model.forecast.distributions, observations.vec,
+                                                    model.vec, locations.vec, year.vec,
+                                                    forecast.target, threshold, percentage)
 
-          # Convert from list format to vector format #**# Could just use vector format to begin with!
-          target.accuracy.metrics.vec = c()
-          for (item in target.accuracy.metrics){
-            target.accuracy.metrics.vec = c(target.accuracy.metrics.vec, item)
-          }
-          names(target.accuracy.metrics.vec) = names(target.accuracy.metrics)
+          # Update accuracy.summary object
+          accuracy.summary = rbind(accuracy.summary, target.accuracy.metrics)
 
-          # Record part 1 #**# Get names to be consistent
-          part1 = c(model, district, forecast.target)
-          names(part1) = c('model', 'district', 'forecast.target')
-
-          # Update accuracy.summary
-          new.record = c(part1, target.accuracy.metrics.vec)
-          accuracy.summary = rbind(accuracy.summary, new.record)
-          #for (item in names(target.accuracy.metrics)){
-          #  position.index = j + (j* (i-1))
-          #  accuracy.summary$forecast.target[position.index] = forecast.target
-          #  accuracy.summary[[item]][position.index] = target.accuracy.metrics[[item]]
-          #}
         }
       }
     }
@@ -782,13 +776,7 @@ evaluate.accuracy = function(models.to.run, forecast.distributions, forecast.tar
   accuracy.summary = accuracy.summary[2:nrow(accuracy.summary), ]
 
   # Ensure outputs are numeric
-  accuracy.summary$CRPS = as.numeric(as.character(accuracy.summary$CRPS))
-  accuracy.summary$RMSE = as.numeric(as.character(accuracy.summary$RMSE))
-  accuracy.summary$Scaled_RMSE = as.numeric(as.character(accuracy.summary$Scaled_RMSE))
-  accuracy.summary$within_percentage = as.numeric(as.character(accuracy.summary$within_percentage))
-  accuracy.summary$within_threshold = as.numeric(as.character(accuracy.summary$within_threshold))
-  accuracy.summary$within_threshold_or_percentage = as.numeric(as.character(accuracy.summary$within_threshold_or_percentage))
-  accuracy.summary$AUC = as.numeric(as.character(accuracy.summary$AUC))
+  accuracy.summary$value = as.numeric(as.character(accuracy.summary$value))
 
   return(accuracy.summary)
 }
