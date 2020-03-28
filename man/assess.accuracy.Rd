@@ -4,8 +4,9 @@
 \alias{assess.accuracy}
 \title{Assess Accuracy}
 \usage{
-assess.accuracy(predictions.mat, observations.vec, forecast.target,
-  threshold = "default", percentage = "default")
+assess.accuracy(predictions.mat, observations.vec, model.vec,
+  locations.vec, year.vec, forecast.target, threshold = "default",
+  percentage = "default")
 }
 \arguments{
 \item{predictions.mat}{A matrix where each row corresponds to a separate
@@ -16,6 +17,12 @@ Note that these are realizations, and not the probabilities associated with
 categories.}
 
 \item{observations.vec}{A vector where each entry corresponds to the observed outcome for the corresponding row in predictions.mat.}
+
+\item{model.vec}{A vector indicating which model is being evaluated}
+
+\item{locations.vec}{A vector giving the location corresponding to each entry in observations.vec}
+
+\item{year.vec}{A vector giving the year corresponding toeach entry in observations.vec}
 
 \item{forecast.target}{The quantity being forecast. Forecasts targets are: \itemize{
 \item annual.human.cases
@@ -47,6 +54,8 @@ High level handler function to decide which metrics to compute and then call
 the code to compute them. At present, only continuous and discrete outcomes are supported.
 }
 \examples{
-assess.accuracy(matrix(rnorm(1000, 8, 1), ncol = 1), rnorm(1000, 8, 1), "seasonal.mosquito.MLE")
+mat = matrix(rnorm(1000, 8, 1), ncol = 1)
+obs = rnorm(1000, 8, 1)
+assess.accuracy(mat, obs, c("TEST"), c("Test"), c(2015), "seasonal.mosquito.MLE")
 
 }
