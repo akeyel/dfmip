@@ -330,7 +330,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
     # Update Results and Distribution objects with output from the Random Forest model (both forecast targets come out merged)
     RF1.model.name = "RF1_A"
-    RF1.forecast.id = sprintf("%s:%s", week.id, RF1.results$district)
+    RF1.forecast.id = sprintf("%s:%s", week.id, RF1.results$location)
     RF1.records = data.frame(model.name = RF1.model.name, forecast.id = RF1.forecast.id,
                              forecast.target = RF1.results$forecast.target,
                              UNIT = UNIT, date = date, year = year, value = RF1.results$value)
@@ -535,7 +535,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
   }
 
   # Data frame to hold outputs
-  observations.df = data.frame(district = NA, year = NA, district_year = NA, forecast.target = NA, value = NA)
+  observations.df = data.frame(location = NA, year = NA, location_year = NA, forecast.target = NA, value = NA)
 
   # If seasonal.mosquito.MLE is a forecast target, calculate the observed
   if ("seasonal.mosquito.MLE" %in% forecast.targets){
@@ -667,14 +667,14 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
 #' @param models.to.run See \code{\link{dfmip.forecast}}
 #' @param forecast.distributions See return object 2 in \code{\link{dfmip.forecast}}
 #' @param forecast.targets See \code{\link{dfmip.forecast}}
-#' @param observations.df A data frame with five fields: district, year, district_year, forecast.target, and value.
-#' Value contains the observed value for the district and year for the corresponding forecast.target
+#' @param observations.df A data frame with five fields: location, year, location_year, forecast.target, and value.
+#' Value contains the observed value for the location and year for the corresponding forecast.target
 #' @param n.draws See \code{\link{dfmip.forecast}}
 #' @param threshold For continuous and discrete forecasts, a threshold of error to be used in classifying the forecast as "accurate". The default is +/- 1 human case, +/- 1 week, otherwise the default is 0.
 #' @param percentage For continuous and discrete forecasts, if the prediction is within the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.
 
-#' @return accuracy.summary A data frame organized by model, district
-#' (and an aggregation across all districts, currently denoted -STATEWIDE, but this does not have to be a state),
+#' @return accuracy.summary A data frame organized by model, location
+#' (and an aggregation across all locations, currently denoted -STATEWIDE, but this does not have to be a state),
 #' forecast.target, with entries for the following evaluation metrics: CRPS, RMSE, Scaled_RMSE, percentage, threshold,
 #' percentage or threshold, and Area Under the Curve (AUC).
 #'
@@ -684,14 +684,14 @@ evaluate.accuracy = function(models.to.run, forecast.distributions, forecast.tar
                              threshold = 'default', percentage = 'default'){
 
   # Create accuracy summary object
-  accuracy.summary = data.frame(model = NA, district = NA, forecast.target = NA, metric = NA, year = NA, value = NA)
+  accuracy.summary = data.frame(model = NA, location = NA, forecast.target = NA, metric = NA, year = NA, value = NA)
 
-  # Add district and district_years field to forecast.distributions for merging with observations.df and subsetting by district
+  # Add location and location_years field to forecast.distributions for merging with observations.df and subsetting by location
   #**# NOTE: probably should add these fields permanently, but I did not want to make upstream edits or redo the unit tests
   #**# this is a change that could be made when someone has spare time, if it does not break backward compatibility too much.
   # Although splitter does make it easy to create these fields on demand from forecast.id, and that reduces the redundant information stored
-  forecast.distributions$district = sapply(forecast.distributions$forecast.id, splitter, ":", 3, 1)
-  forecast.distributions$district_year = sprintf("%s_%s", forecast.distributions$district, forecast.distributions$year)
+  forecast.distributions$location = sapply(forecast.distributions$forecast.id, splitter, ":", 3, 1)
+  forecast.distributions$location_year = sprintf("%s_%s", forecast.distributions$location, forecast.distributions$year)
 
   # Loop through forecast targets
   for (i in seq_len(length(forecast.targets))){
@@ -700,16 +700,16 @@ evaluate.accuracy = function(models.to.run, forecast.distributions, forecast.tar
     target.distributions = forecast.distributions[forecast.distributions$forecast.target == forecast.target, ]
     target.observations = observations.df[observations.df$forecast.target == forecast.target, ]
 
-    # Loop over districts
-    districts = unique(target.distributions$district)
-    for (k in seq_len(length(districts))){
-      district = districts[k]
-      district.distributions = target.distributions[target.distributions$district == district, ]
+    # Loop over locations
+    locations = unique(target.distributions$location)
+    for (k in seq_len(length(locations))){
+      location = locations[k]
+      location.distributions = target.distributions[target.distributions$location == location, ]
 
       # Calculate accuracy over all forecasts for each model
       for (j in seq_len(length(models.to.run))){
         model = models.to.run[j]
-        dist.subset = district.distributions[district.distributions$model.name == model, ]
+        dist.subset = location.distributions[location.distributions$model.name == model, ]
 
         # Check that model results were extracted. If not, throw an error, and present possible causes
         if (nrow(dist.subset) == 0){
@@ -719,7 +719,7 @@ evaluate.accuracy = function(models.to.run, forecast.distributions, forecast.tar
         #**# Would it be faster to move this upstream?
         #**# NOTE: Do not move above forecast target subsetting, or you could merge in values from the wrong forecast target
         # Merge observations with forecast distributions. Only keep matches for the dist.subset object
-        dist.subset = merge(dist.subset, target.observations, by = 'district_year', all.x = TRUE, all.y = FALSE)
+        dist.subset = merge(dist.subset, target.observations, by = 'location_year', all.x = TRUE, all.y = FALSE)
 
         # Do not include in accuracy assessment if there are no corresponding observations
         # This can happen because if there are training data, the model can make a forecast, but not all locations may have observations for all years
@@ -749,8 +749,8 @@ evaluate.accuracy = function(models.to.run, forecast.distributions, forecast.tar
           # Observations will be added with the field name 'value', so this should just correspond to observations in the same order
           observations.vec = as.numeric(as.character(dist.subset$value))
 
-          # Locations will just be the same district, as we have already subset to that
-          locations.vec = rep(district, length(observations.vec))
+          # Locations will just be the same location, as we have already subset to that
+          locations.vec = rep(location, length(observations.vec))
 
           # Years come from year column
           year.vec = dist.subset$year.x #year.x following the merge
@@ -2276,7 +2276,10 @@ expand.human.data = function(cases, arbitrary.date = "08-01", case.field = "coun
         # Fill in human.data object
         n.cases = district.subset[[case.field]][1]
         for (i in seq_len(n.cases)){
-          new.date = sprintf("%s-%s", year, arbitrary.date)
+          #new.date = sprintf("%s-%s", year, arbitrary.date)
+          month = splitter(arbitrary.date, '-', 1, 1)
+          day = splitter(arbitrary.date, '-', 2, 1)
+          new.date = sprintf("%s/%s/%s", month, day, year)
           new.record = c(new.date, district)
           human.data = rbind(human.data, new.record)
         }
