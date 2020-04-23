@@ -50,7 +50,7 @@ NULL
 #'
 #' RF1 Details: See rf1 package: ?rf1
 #'
-#' Null models are at the scale of the state, but future updates aim to allow variation by district
+#' Null model uses historical probabilities.
 #'
 #' @param forecast.targets The quantities for which hindcasts are to be made. Options are: \tabular{ll}{
 #' annual.human.cases \tab Number of human cases\cr
@@ -63,9 +63,9 @@ NULL
 #' RF1_A \tab Random Forest model, all available inputs.\cr  }
 #' Note these entries are case-sensitive and are run by keyword, so run in a fixed order (NULL.MODELS, ArboMAP, ArboMAP.MOD, RF1_C, RF1_A),
 #' regardless of the order specified in the models.to.run vector.
-#' @param human.data Data on human cases of the disease. Must be formatted with two columns: district and date (in format M/D/Y, with forward slashes as delimiters). An optional 'year' column may also be present. If absent, it will be generated from the date column. The district column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case.
+#' @param human.data Data on human cases of the disease. Must be formatted with two columns: location and date (in format M/D/Y, with forward slashes as delimiters). An optional 'year' column may also be present. If absent, it will be generated from the date column. The location column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case.
 #' #**# WHAT IF THESE DATA ARE MISSING? I.E. just making a mosquito forecast with RF1?
-#' @param mosq.data Data on mosquito pools tested for the disease. Must be formatted with 4 columns: district (the spatial unit, e.g. county), col_date: the date the mosquitoes were tested, wnv_result: whether or not the pool was positive, pool_size: the number of mosquitoes tested in the pool. A fifth column species is optional but is not used by the code
+#' @param mosq.data Data on mosquito pools tested for the disease. Must be formatted with 4 columns: location (the spatial unit, e.g. county), col_date: the date the mosquitoes were tested, wnv_result: whether or not the pool was positive, pool_size: the number of mosquitoes tested in the pool. A fifth column species is optional but is not used by the code
 #' @param weather.data Data on weather variables to be included in the analysis. See the read.weather.data function for details about data format.
 #' The read.weather.data function from ArboMAP is a useful way to process one or more data files downloaded via Google Earth Engine.
 #' @param weekinquestion The focal week for the forecast. For the Random Forest model, this will be the last day used for making the forecast
@@ -77,7 +77,7 @@ NULL
 #' @param population.df Census information for calculating incidence. Can be set to 'none' or omitted from the function call #**# NEEDS FORMAT INSTRUCTIONS
 #' @param n.draws The number of draws for the forecast distributions. Should generally be 1 if a point estimate is used, otherwise should be a large enough number to adequately represent the variation in the underlying data
 #' @param point.estimate Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.
-#' @param analysis.districts Districts to include in the analysis. This may include districts with no human cases that would otherwise be dropped from the modeling.
+#' @param analysis.locations locations to include in the analysis. This may include locations with no human cases that would otherwise be dropped from the modeling.
 #' @param is.test Default is FALSE (runs all models). If set to TRUE, saved results will be used for the Random Forest model. For testing purposes only.
 #'
 #' @return dfmip.outputs: List of three objects: \tabular{ll}{
@@ -95,7 +95,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
                      weather.data, weekinquestion, week.id,
                      results.path, model.inputs = list(),
                      population.df = 'none', n.draws = 1000, point.estimate = 0,
-                     analysis.districts = 'default', is.test = FALSE){
+                     analysis.locations = 'default', is.test = FALSE){
 
   # Check that models to run are all valid model names
   models.in.dfmip = c("NULL.MODELS", "ArboMAP", "ArboMAP.MOD", "RF1_C", "RF1_A", "FLM")
@@ -107,16 +107,31 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
   # Check that the appropriate input objects have been provided for the desired models
   check.model.inputs(models.to.run, model.inputs)
 
-  # Configure default for analysis.districts
-  analysis.districts = configure.analysis.districts(analysis.districts, forecast.targets, human.data, mosq.data)
-
-  # Restrict data analysis to analysis.districts
-  human.data =   human.data[as.character(human.data$district) %in% analysis.districts, ]
+  # Check that location and location_year fields are present in data set
+  # Restrict data analysis to analysis.locations and check that required fields are present
+  if (!length(human.data) == 1){
+    human.data$year = vapply(as.character(human.data$date), splitter, FUN.VALUE = numeric(1),  "/", 3)
+    human.data = district.to.location(human.data, "human.data", old.name = 'district', new.name = 'location')
+  }
   if (!length(mosq.data) == 1){
-    mosq.data = mosq.data[as.character(mosq.data$district) %in% analysis.districts, ]
+    mosq.data$year = mapply(substr, mosq.data$col_date, nchar(as.character(mosq.data$col_date)) - 3, nchar(as.character(mosq.data$col_date)))
+    mosq.data$year = as.numeric(mosq.data$year)
+    mosq.data = district.to.location(mosq.data, "mosq.data", old.name = 'district', new.name = 'location')
   }
   if (!length(weather.data) == 1){
-    weather.data = weather.data[as.character(weather.data$district) %in% analysis.districts, ]
+    weather.data = district.to.location(weather.data, 'weather.data')
+  }
+
+  # Configure default for analysis.locations & restrict data analyis to analysis.locations
+  analysis.locations = configure.analysis.locations(analysis.locations, forecast.targets, human.data, mosq.data)
+  if (!length(human.data) == 1){
+    human.data =   human.data[as.character(human.data$location) %in% analysis.locations, ]
+  }
+  if (!length(mosq.data) == 1){
+    mosq.data = mosq.data[as.character(mosq.data$location) %in% analysis.locations, ]
+  }
+  if (!length(weather.data) == 1){
+    weather.data = weather.data[as.character(weather.data$location) %in% analysis.locations, ]
   }
 
   # Initialize the forecast object
@@ -140,7 +155,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     message("Running NULL models")
 
     null.out = run.null.models(forecast.targets, forecasts.df, forecast.distributions, human.data,
-                            week.id, weekinquestion, n.draws, point.estimate, analysis.districts, mosq.data,
+                            week.id, weekinquestion, n.draws, point.estimate, analysis.locations, mosq.data,
                             population.df, model.name = "NULL.MODELS")
 
     forecasts.df = null.out[[1]]
@@ -261,12 +276,12 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     rf1.inputs.no.extras[[1]] = NA
     rf1.inputs.no.extras[[2]] = NA
 
-    input.districts = paste(sort(rf1.inputs.no.extras[[3]]), collapse = " ")
-    analysis.districts.str = paste(sort(analysis.districts), collapse = " ")
+    input.locations = paste(sort(rf1.inputs.no.extras[[3]]), collapse = " ")
+    analysis.locations.str = paste(sort(analysis.locations), collapse = " ")
 
-    if (input.districts != analysis.districts.str){
-      rf1.inputs.no.extras[[3]] = analysis.districts
-      warning("Analysis districts in rf1.inputs over-ridden by the analysis districts supplied to dfmip as an input")
+    if (input.locations != analysis.locations.str){
+      rf1.inputs.no.extras[[3]] = analysis.locations
+      warning("Analysis locations in rf1.inputs over-ridden by the analysis locations supplied to dfmip as an input")
     }
 
     RF1.out = rf1::rf1(forecast.targets, human.data, mosq.data, weather.data,
@@ -280,7 +295,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
     # Update Results and Distribution objects with output from the Random Forest model (both forecast targets come out merged)
     RF1.model.name = "RF1_C"
-    RF1.forecast.id = sprintf("%s:%s", week.id, RF1.results$district)
+    RF1.forecast.id = sprintf("%s:%s", week.id, RF1.results$location)
     RF1.records = data.frame(model.name = RF1.model.name, forecast.id = RF1.forecast.id,
                              forecast.target = RF1.results$forecast.target,
                              UNIT = UNIT, date = date, year = year, value = RF1.results$value)
@@ -307,12 +322,12 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     }
     rf1.inputs = model.inputs[["rf1.inputs"]]
 
-    input.districts = paste(sort(rf1.inputs[[3]]), collapse = " ")
-    analysis.districts.str = paste(sort(analysis.districts), collapse = " ")
+    input.locations = paste(sort(rf1.inputs[[3]]), collapse = " ")
+    analysis.locations.str = paste(sort(analysis.locations), collapse = " ")
 
-    if (input.districts != analysis.districts.str){
-      rf1.inputs[[3]] = analysis.districts
-      warning("rf1.inputs analysis districts was replaced by the input supplied to dfmip")
+    if (input.locations != analysis.locations.str){
+      rf1.inputs[[3]] = analysis.locations
+      warning("rf1.inputs analysis locations was replaced by the input supplied to dfmip")
     }
 
     # Set up the sub-model output results
@@ -380,7 +395,7 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
     forecasts.df = update.df2(forecasts.df, flm.records)
 
-    # Add zeros for counties that never had a human case, using analysis.districts
+    # Add zeros for counties that never had a human case, using analysis.locations
     warning("Still need to add zeros to flm for counties that never had a human case of WNV")
 
     flm.distribution.records = data.frame(model.name = this.model.name, forecast.id = model.forecast.id,
@@ -467,11 +482,11 @@ NULL
 #'
 #' Generate hindcasts for a suite of models using common data inputs, and evaluate their accuracy using a standardized suite of validation metrics
 #' @details Forecast targets not yet supported, but in development: \tabular{ll}{
-#' human_incidence \tab Human cases divided by district population.\cr
+#' human_incidence \tab Human cases divided by location population.\cr
 #' peak_mosquito_MLE \tab Peak mosquito infection rate (maximum likelihood estimate) during the season (averaged over what time period?)\cr
-#' number_positive_pools \tab The number of positive mosquito pools observed by district\cr
-#' human_cases_binary \tab Whether or not human cases will occur in a district\cr
-#' positive_pools_binary \tab Whether or not a district will have any positive mosquito pools\cr
+#' number_positive_pools \tab The number of positive mosquito pools observed by location\cr
+#' human_cases_binary \tab Whether or not human cases will occur in a location\cr
+#' positive_pools_binary \tab Whether or not a location will have any positive mosquito pools\cr
 #' peak_timing \tab The week (day?) of the peak mosquito infection rate\cr}
 #'
 #' @param forecast.targets The quantities for which hindcasts are to be made. Options are: \tabular{ll}{
@@ -486,9 +501,9 @@ NULL
 #' Note these entries are case-sensitive and are run by keyword, so run in a fixed order (NULL.MODELS, ArboMAP, ArboMAP.MOD, RF1_C, RF1_A),
 #' regardless of the order specified in the models.to.run vector.
 #' @param focal.years The years for which hindcasts will be made. Hindcasts will use all prior years as training data.
-#' @param human.data Data on human cases of the disease. Must be formatted with two columns: district and date. The district column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case. The date column must be in format M/D/Y, with forward slashes as delimiters
+#' @param human.data Data on human cases of the disease. Must be formatted with two columns: location and date. The location column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case. The date column must be in format M/D/Y, with forward slashes as delimiters
 #' #**# WHAT IF THESE DATA ARE MISSING? I.E. just making a mosquito forecast with RF1?
-#' @param mosq.data Data on mosquito pools tested for the disease. Must be formatted with 4 columns: district (the spatial unit, e.g. county), col_date: the date the mosquitoes were tested, wnv_result: whether or not the pool was positive, pool_size: the number of mosquitoes tested in the pool. A fifth column species is optional but is not used by the code
+#' @param mosq.data Data on mosquito pools tested for the disease. Must be formatted with 4 columns: location (the spatial unit, e.g. county), col_date: the date the mosquitoes were tested, wnv_result: whether or not the pool was positive, pool_size: the number of mosquitoes tested in the pool. A fifth column species is optional but is not used by the code
 #' @param weather.data Data on weather variables to be included in the analysis. See the read.weather.data function for details about data format.
 #' The read.weather.data function from ArboMAP is a useful way to process one or more data files downloaded via Google Earth Engine.
 #' @param results.path The base path in which to place the modeling results. Some models will create sub-folders for model specific results
@@ -504,7 +519,7 @@ NULL
 #' @param sample_frequency How frequently sample (default, 1 = weekly) #**# Other options are not currently supported
 #' @param n.draws The number of draws for the forecast distributions. Should generally be 1 if a point estimate is used, otherwise should be a large enough number to adequately represent the variation in the underlying data
 #' @param point.estimate Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.
-#' @param analysis.districts Districts to include in the analysis. This may include districts with no human cases that would otherwise be dropped from the modeling.
+#' @param analysis.locations locations to include in the analysis. This may include locations with no human cases that would otherwise be dropped from the modeling.
 #' @param is.test Default is 0 (runs all models). If set to 1, saved results will be used for the Random Forest model. For testing purposes only.
 
 #' @return Four objects #**# ADD DOCUMENTATION. Also consider a list to hold the 'other.outputs'
@@ -514,24 +529,38 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
                            weather.data, results.path, model.inputs = list(),
                            population.df = 'none', threshold = 'default', percentage = 'default',
                            id.string = "", season_start_month = 7, weeks_in_season = 2, sample_frequency = 1,
-                           n.draws = 1000, point.estimate = 0, analysis.districts = 'default', is.test = FALSE){
+                           n.draws = 1000, point.estimate = 0, analysis.locations = 'default', is.test = FALSE){
 
   # Indicator to denote the first time through the loop
   first = 1
   # List to hold outputs
   #observation.list = list()
 
-  # Configure default for analysis.districts
-  analysis.districts = configure.analysis.districts(analysis.districts, forecast.targets, human.data, mosq.data)
-
-  # Restrict data analysis to analysis.districts
-  human.data =   human.data[as.character(human.data$district) %in% analysis.districts, ]
-  # Length == 1 corresponds to NA. Cannot use is.na() because if it the data set, R throws a warning that the condition length is >1
+  # Check that location and location_year fields are present in data set
+  # Restrict data analysis to analysis.locations and check that required fields are present
+  if (!length(human.data) == 1){
+    human.data$year = vapply(as.character(human.data$date), splitter, FUN.VALUE = numeric(1),  "/", 3)
+    human.data = district.to.location(human.data, "human.data", old.name = 'district', new.name = 'location')
+  }
   if (!length(mosq.data) == 1){
-    mosq.data = mosq.data[as.character(mosq.data$district) %in% analysis.districts, ]
+    mosq.data$year = mapply(substr, mosq.data$col_date, nchar(as.character(mosq.data$col_date)) - 3, nchar(as.character(mosq.data$col_date)))
+    mosq.data$year = as.numeric(mosq.data$year)
+    mosq.data = district.to.location(mosq.data, "mosq.data", old.name = 'district', new.name = 'location')
   }
   if (!length(weather.data) == 1){
-    weather.data = weather.data[as.character(weather.data$district) %in% analysis.districts, ]
+    weather.data = district.to.location(weather.data, 'weather.data')
+  }
+
+  # Configure default for analysis.locations & restrict data analyis to analysis.locations
+  analysis.locations = configure.analysis.locations(analysis.locations, forecast.targets, human.data, mosq.data)
+  if (!length(human.data) == 1){
+    human.data =   human.data[as.character(human.data$location) %in% analysis.locations, ]
+  }
+  if (!length(mosq.data) == 1){
+    mosq.data = mosq.data[as.character(mosq.data$location) %in% analysis.locations, ]
+  }
+  if (!length(weather.data) == 1){
+    weather.data = weather.data[as.character(weather.data$location) %in% analysis.locations, ]
   }
 
   # Data frame to hold outputs
@@ -560,22 +589,21 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
 
     # Other observed variables to consider calculating
     #mosq.data.year = mosq.data.all[mosq.data.all$year == year, ]
-    #positive.districts = aggregate(mosq.data.year$wnv_result, by = list(mosq.data.year$district), max) # Max will be 1 if a district is positive, or 0 if it is negative
-    #year.positive.districts = sum(positive.districts$x) #**# CHECK THAT THIS IS EQUIVALENT TO WHAT ARBOMAP IS ACTUALLY CALCULATING
-    year.positive.districts = NA #**# THIS WAS NOT BEING CALCULATED CORRECTLY!
+    #positive.locations = aggregate(mosq.data.year$wnv_result, by = list(mosq.data.year$location), max) # Max will be 1 if a location is positive, or 0 if it is negative
+    #year.positive.locations = sum(positive.locations$x) #**# CHECK THAT THIS IS EQUIVALENT TO WHAT ARBOMAP IS ACTUALLY CALCULATING
+    year.positive.locations = NA #**# THIS WAS NOT BEING CALCULATED CORRECTLY!
 
     # Format data to ensure compatibility with code below
     #human.data$year = sapply(as.character(human.data$date), splitter,  "/", 3)
-    human.data$year = vapply(as.character(human.data$date), splitter, FUN.VALUE = numeric(1),  "/", 3)
-    if (!length(mosq.data) == 1){  mosq.data$date = mosq.data$col_date  }
+    if (!length(mosq.data) == 1){  mosq.data$date = mosq.data$col_date  } #**# md.data is used at this point; is this an error?
 
     # Calculate the observed values for the year
     if ("annual.human.cases" %in% forecast.targets){
-      observations.df = update.observations(observations.df, human.data, 'annual.human.cases', id.string, year, analysis.districts)
+      observations.df = update.observations(observations.df, human.data, 'annual.human.cases', id.string, year, analysis.locations)
     }
 
     if ("seasonal.mosquito.MLE" %in% forecast.targets){
-      observations.df = update.observations(observations.df, md.data, 'seasonal.mosquito.MLE', id.string, year, analysis.districts)
+      observations.df = update.observations(observations.df, md.data, 'seasonal.mosquito.MLE', id.string, year, analysis.locations)
     }
 
     # Loop through weeks to get a new forecast for each week for ArboMAP
@@ -636,7 +664,7 @@ dfmip.hindcasts = function(forecast.targets, models.to.run, focal.years, human.d
         out = dfmip.forecast(forecast.targets, actual.models.to.run, human.data.subset, mosq.data.subset, weather.data.subset,
                              weekinquestion, week.id, results.path,
                              model.inputs, population.df, n.draws = n.draws, point.estimate = point.estimate,
-                             analysis.districts = analysis.districts, is.test = is.test)
+                             analysis.locations = analysis.locations, is.test = is.test)
         out.forecasts = out[[1]]
         out.distributions = out[[2]]
 
@@ -711,6 +739,9 @@ evaluate.accuracy = function(models.to.run, forecast.distributions, forecast.tar
         model = models.to.run[j]
         dist.subset = location.distributions[location.distributions$model.name == model, ]
 
+        #message(location)
+        #message(nrow(dist.subset))
+
         # Check that model results were extracted. If not, throw an error, and present possible causes
         if (nrow(dist.subset) == 0){
           stop(sprintf("No results for %s model. Models included in the results are %s. Please check for a typo in the model names", model, paste(models.to.run, collapse = ', ')))
@@ -721,9 +752,13 @@ evaluate.accuracy = function(models.to.run, forecast.distributions, forecast.tar
         # Merge observations with forecast distributions. Only keep matches for the dist.subset object
         dist.subset = merge(dist.subset, target.observations, by = 'location_year', all.x = TRUE, all.y = FALSE)
 
+        #message(nrow(dist.subset))
+
         # Do not include in accuracy assessment if there are no corresponding observations
         # This can happen because if there are training data, the model can make a forecast, but not all locations may have observations for all years
         dist.subset = dist.subset[!is.na(dist.subset$value), ]
+        #message(nrow(dist.subset))
+
         if (nrow(dist.subset) > 0){
           # Generate the distributions matrix and the observations vector
           # Drop all non-data columns. Row 1 is the join field, Rows 2-7 are informational from forecast.distributions, and anything added on to the end was calculated or from the observations.df
@@ -764,8 +799,11 @@ evaluate.accuracy = function(models.to.run, forecast.distributions, forecast.tar
                                                     model.vec, locations.vec, year.vec,
                                                     forecast.target, threshold, percentage)
 
+          #message(paste(target.accuracy.metrics, collapse = ', '))
+
           # Update accuracy.summary object
           accuracy.summary = rbind(accuracy.summary, target.accuracy.metrics)
+          #message(nrow(accuracy.summary))
 
         }
       }
@@ -858,7 +896,7 @@ update.df2 = function(forecasts.df, results.df){
 #'   }
 #'
 #'   # Other former targets
-#'   #annual.positive.district.weeks = results.object$annual.positive.district.weeks
+#'   #annual.positive.location.weeks = results.object$annual.positive.location.weeks
 #'   #multiplier = results.object$multiplier
 #'   #weeks.cases = results.object$weeks.cases
 #'
@@ -870,11 +908,11 @@ update.df2 = function(forecasts.df, results.df){
 #'     # Minimum length should be 5 for 5 fields, so <2 should never happen with a filled forecasts.df object
 #'     if (!is.na(forecasts.df)){ stop("Something went very wrong with the update.df function") }
 #'
-#'     forecasts.df = data.frame(MODEL.NAME = model.name, FORECAST.ID = as.character(forecast.id), UNIT = as.character(UNIT), DATE = as.character(date), YEAR = year)
+#'     forecasts.df = data.frame(MODEL.NAME = model.name, FORECAST.ID = as.character(forecast.id), UNIT = as.character(UNIT), DATE = as.character(date), year = year)
 #'
 #'     if ("annual.human.cases" %in% forecast.targets){  forecasts.df$annual.human.cases = annual.human.cases }
 #'     if ("seasonal.mosquito.MLE" %in% forecast.targets){ forecasts.df$seasonal.mosquito.MLE = seasonal.mosquito.MLE  }
-#'     #ANNUAL.POSITIVE.DISTRICT.WEEKS = annual.positive.district.weeks,
+#'     #ANNUAL.POSITIVE.location.WEEKS = annual.positive.location.weeks,
 #'     #FORECAST.WEEK.CASES = weeks.cases
 #'
 #'     # Ensure that fields come in as character, so that factor levels are not locked and fields are fully updateable
@@ -889,7 +927,7 @@ update.df2 = function(forecasts.df, results.df){
 #'     targets = c()
 #'     if ("annual.human.cases" %in% forecast.targets){  targets = c(targets, annual.human.cases) }
 #'     if ("seasonal.mosquito.MLE" %in% forecast.targets){ targets = c(targets, seasonal.mosquito.MLE)  }
-#'     #annual.positive.district.weeks
+#'     #annual.positive.location.weeks
 #'     #weeks.cases
 #'
 #'     new.row = c(model.name, forecast.id, UNIT, date, year, targets)
@@ -899,7 +937,7 @@ update.df2 = function(forecasts.df, results.df){
 #'     # Ensure numeric fields are numeric
 #'     if ("annual.human.cases" %in% forecast.targets){ forecasts.df$annual.human.cases = as.numeric(forecasts.df$annual.human.cases) }
 #'     if ('seasonal.mosquito.MLE' %in% forecast.targets){ forecasts.df$seasonal.mosquito.MLE = as.numeric(forecasts.df$seasonal.mosquito.MLE) }
-#'     forecasts.df$YEAR = as.numeric(forecasts.df$YEAR)
+#'     forecasts.df$year = as.numeric(forecasts.df$year)
 #'   }
 #'
 #'   return(forecasts.df)
@@ -983,7 +1021,7 @@ update.distribution = function(forecast.targets, model.name, forecast.id, foreca
   if ("seasonal.mosquito.MLE" %in% forecast.targets){  seasonal.mosquito.MLE = results.object$seasonal.mosquito.MLE  }
 
   # Other former targets
-  #annual.positive.district.weeks = results.object$annual.positive.district.weeks
+  #annual.positive.location.weeks = results.object$annual.positive.location.weeks
   #multiplier = results.object$multiplier
   #weeks.cases = results.object$weeks.cases
 
@@ -1001,7 +1039,7 @@ update.distribution = function(forecast.targets, model.name, forecast.id, foreca
       seasonal.mosquito.MLE.list[[forecast.key]] = seasonal.mosquito.MLE
       forecast.distributions[['seasonal.mosquito.MLE']] = seasonal.mosquito.MLE.list
     }
-    #ANNUAL.POSITIVE.DISTRICT.WEEKS = annual.positive.district.weeks,
+    #ANNUAL.POSITIVE.location.WEEKS = annual.positive.location.weeks,
     #FORECAST.WEEK.CASES = weeks.cases
 
     # Otherwise, update the existing lists
@@ -1029,7 +1067,7 @@ update.distribution = function(forecast.targets, model.name, forecast.id, foreca
         forecast.distributions[['seasonal.mosquito.MLE']] = seasonal.mosquito.MLE.list
       }
     }
-    #annual.positive.district.weeks
+    #annual.positive.location.weeks
     #weeks.cases
   }
 
@@ -1161,7 +1199,7 @@ statewide.cases.null.model = function(human.data, n.years, model.name, week.id, 
   }else{
     # Draw from historical values
     #**# really should think about smoothing this distribution out)
-    #**# An easy way would be to do the process at the district level, then sum across disticts. That would produce continuous statewide counts, and have the benefit of making the predictions align
+    #**# An easy way would be to do the process at the location level, then sum across disticts. That would produce continuous statewide counts, and have the benefit of making the predictions align
     human.data$count = 1
     historical.counts = stats::aggregate(human.data$count, by = list(human.data$year), sum, na.rm = TRUE)
     historical.counts = historical.counts$x
@@ -1179,57 +1217,57 @@ statewide.cases.null.model = function(human.data, n.years, model.name, week.id, 
   return(list(statewide.cases, statewide.distributions))
 }
 
-#' District Cases Null Model
+#' location Cases Null Model
 #'
-#' Predict the number of human cases of WNV based on historical number of human cases by district
+#' Predict the number of human cases of WNV based on historical number of human cases by location
 #'
 #'@param human.data Standardized human data input
 #'@param n.years Number of years in human.data
 #'
 #' @noRd
 #'
-district.cases.null.model = function(human.data, n.years, model.name, week.id,
-                                     n.draws, point.estimate, analysis.districts){
+location.cases.null.model = function(human.data, n.years, model.name, week.id,
+                                     n.draws, point.estimate, analysis.locations){
 
   # unpack week.id
   UNIT = splitter(as.character(week.id), ":", 1, 1)
   date = splitter(as.character(week.id), ":", 2, 1)
   year = splitter(date, "-", 1, 0)
   human.data$count = 1 # Add a count column for aggregation
-  #districts = unique(human.data$district)
-  districts = analysis.districts
+  #locations = unique(human.data$location)
+  locations = analysis.locations
 
-  # Data frame will be populated with values by looping through districts
-  district.cases = data.frame(model.name = model.name, forecast.id = rep(NA, length(districts)),
+  # Data frame will be populated with values by looping through locations
+  location.cases = data.frame(model.name = model.name, forecast.id = rep(NA, length(locations)),
                               forecast.target = "annual.human.cases",
                               UNIT = UNIT, date = date, year = year, value = NA)
 
   # Similar for distributions, except distributions will be added as a matrix with cbind later
-  district.distributions = data.frame(model.name = model.name, forecast.id = rep(NA, length(districts)),
+  location.distributions = data.frame(model.name = model.name, forecast.id = rep(NA, length(locations)),
                                        forecast.target = "annual.human.cases",
                                        UNIT = UNIT, date = date, year = year)
 
 
-  # Loop over districts
-  for (i in seq_len(length(districts))){
+  # Loop over locations
+  for (i in seq_len(length(locations))){
 
-    district = districts[i]
-    forecast.id = sprintf("%s:%s", week.id, district)
+    location = locations[i]
+    forecast.id = sprintf("%s:%s", week.id, location)
 
-    human.data.subset = human.data[as.character(human.data$district) == district, ]
-    total.district.cases = nrow(human.data.subset)
-    district.cases.per.year = total.district.cases / n.years
+    human.data.subset = human.data[as.character(human.data$location) == location, ]
+    total.location.cases = nrow(human.data.subset)
+    location.cases.per.year = total.location.cases / n.years
 
     # update spatial.cases.per.year
-    district.cases$forecast.id[i] = forecast.id
-    district.cases$value[i] = district.cases.per.year
+    location.cases$forecast.id[i] = forecast.id
+    location.cases$value[i] = location.cases.per.year
 
     # Update distributions
-    district.distributions$forecast.id[i] = forecast.id
+    location.distributions$forecast.id[i] = forecast.id
     if (point.estimate == 1){
-      if (i == 1){  distributions.matrix = matrix(rep(district.cases.per.year, n.draws), nrow = 1)
+      if (i == 1){  distributions.matrix = matrix(rep(location.cases.per.year, n.draws), nrow = 1)
       }else{
-        distributions.matrix = rbind(distributions.matrix, rep(district.cases.per.year, n.draws))
+        distributions.matrix = rbind(distributions.matrix, rep(location.cases.per.year, n.draws))
       }
     }else{
       # Draw from historical values (really should think about smoothing this distribution out)
@@ -1255,10 +1293,10 @@ district.cases.null.model = function(human.data, n.years, model.name, week.id,
   }
 
   #**# Watch for issues with the distributions.matrix
-  distributions.matrix = matrix(distributions.matrix, nrow = length(districts)) # Ensure that it is a matrix, even if there is only one district and R changes the matrix to a row
-  district.distributions = cbind(district.distributions, distributions.matrix)
+  distributions.matrix = matrix(distributions.matrix, nrow = length(locations)) # Ensure that it is a matrix, even if there is only one location and R changes the matrix to a row
+  location.distributions = cbind(location.distributions, distributions.matrix)
 
-  return(list(district.cases, district.distributions))
+  return(list(location.cases, location.distributions))
 }
 
 
@@ -1268,7 +1306,7 @@ district.cases.null.model = function(human.data, n.years, model.name, week.id,
 #' This model does not adjust risk based on county - clearly an incorrect model assumption, but one that is of interest
 #'
 #'@param human.data Standardized human data input
-#'@param population.df A data frame with districts (counties) and their populations. A column labeled SPATIAL should contain the county/district information, while population should be in a TOTAL_POPULATION column.
+#'@param population.df A data frame with locations (counties) and their populations. A column labeled SPATIAL should contain the county/location information, while population should be in a TOTAL_POPULATION column.
 #'@param cases.per.year Average number of cases per year
 #'@param n.years Number of years in human.data
 #'
@@ -1277,27 +1315,27 @@ district.cases.null.model = function(human.data, n.years, model.name, week.id,
 mean.incidence.model = function(human.data, population.df, cases.per.year, n.years){
 
   # Subset the population data to just spatial locations included in human.data
-  population.df = population.df[as.character(population.df$SPATIAL) %in% as.character(human.data$district), ]
+  population.df = population.df[as.character(population.df$SPATIAL) %in% as.character(human.data$location), ]
 
   incidence.per.year = cases.per.year / sum(population.df$TOTAL_POPULATION)
   spatial.cases.per.year = data.frame(SPATIAL = population.df$SPATIAL, TOTAL_POPULATION = population.df$TOTAL_POPULATION, CASES.STATEWIDE.INCIDENCE = (population.df$TOTAL_POPULATION * incidence.per.year), STATEWIDE.INCIDENCE = incidence.per.year)
 
-  # Calculate indicence on a district-specific basis
-  spatial.cases.per.year$CASES.DISTRICT.INCIDENCE = NA
-  spatial.cases.per.year$DISTRICT.INCIDENCE = NA
+  # Calculate indicence on a location-specific basis
+  spatial.cases.per.year$CASES.location.INCIDENCE = NA
+  spatial.cases.per.year$location.INCIDENCE = NA
 
-  # Loop over districts
+  # Loop over locations
   for (i in seq_len(length(spatial.cases.per.year$SPATIAL))){
-    district = as.character(spatial.cases.per.year$SPATIAL[i])
-    district.population = spatial.cases.per.year$TOTAL_POPULATION[i]
-    human.data.subset = human.data[as.character(human.data$district) == district, ]
-    total.district.cases = nrow(human.data.subset)
-    district.cases.per.year = total.district.cases / n.years
-    district.incidence = district.cases.per.year / district.population
+    location = as.character(spatial.cases.per.year$SPATIAL[i])
+    location.population = spatial.cases.per.year$TOTAL_POPULATION[i]
+    human.data.subset = human.data[as.character(human.data$location) == location, ]
+    total.location.cases = nrow(human.data.subset)
+    location.cases.per.year = total.location.cases / n.years
+    location.incidence = location.cases.per.year / location.population
 
     # update spatial.cases.per.year
-    spatial.cases.per.year$CASES.DISTRICT.INCIDENCE[i] = district.cases.per.year
-    spatial.cases.per.year$DISTRICT.INCIDENCE[i] = district.incidence
+    spatial.cases.per.year$CASES.location.INCIDENCE[i] = location.cases.per.year
+    spatial.cases.per.year$location.INCIDENCE[i] = location.incidence
   }
 
   #**# Think about an area-based incidence model - except this would be more of a thought exercise for NYS, as some of the smallest counties have the highest numbers of cases
@@ -1316,7 +1354,7 @@ mean.incidence.model = function(human.data, population.df, cases.per.year, n.yea
 #'@param week.start The day of year on which the week starts in the focal year
 #'#**# should this just be year? I bet there is a pattern based on year.
 #'
-#' Can apply this at the district level by multiplying the estimates by the mean annual cases for each district.
+#' Can apply this at the location level by multiplying the estimates by the mean annual cases for each location.
 #' But likely too few in NYS for that to be particularly useful?
 #'
 #' @noRd
@@ -1741,15 +1779,15 @@ check.model.inputs = function(models.to.run, model.inputs){
 #' @param weekinquestion See \code{\link{dfmip.forecast}}
 #' @param n.draws The number of draws for the forecast distributions. Should be 1 if a point estimate is used, otherwise should be a large enough number to adequately represent the variation in the underlying data
 #' @param point.estimate Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.
-#' @param analysis.districts Districts to include in the analysis. This may include districts with no human cases that would otherwise be dropped from the modeling.
+#' @param analysis.locations locations to include in the analysis. This may include locations with no human cases that would otherwise be dropped from the modeling.
 #' @param mosq.data Only required if a mosquito output is among the forecast targets. See \code{\link{dfmip.forecast}}
-#' @param population.df A data frame with districts (counties) and their populations. A column labeled SPATIAL should contain the county/district information, while population should be in a TOTAL_POPULATION column. Only required if incidence calculations are desired.
+#' @param population.df A data frame with locations (counties) and their populations. A column labeled SPATIAL should contain the county/location information, while population should be in a TOTAL_POPULATION column. Only required if incidence calculations are desired.
 #' @param model.name The name of the model to use in forecasts.df and forecast.distributions
 #'
 #' @return A list consisting of a data frame with forecast results and a list of forecast distributions
 #'
 run.null.models = function(forecast.targets, forecasts.df, forecast.distributions, human.data,
-                           week.id, weekinquestion, n.draws, point.estimate, analysis.districts,
+                           week.id, weekinquestion, n.draws, point.estimate, analysis.locations,
                            mosq.data = NA, population.df = NA, model.name = "NULL.MODELS"){
 
   # Create the year column, if it is missing
@@ -1772,14 +1810,14 @@ run.null.models = function(forecast.targets, forecasts.df, forecast.distribution
     forecasts.df = update.df2(forecasts.df, statewide.cases)
     forecast.distributions = update.distribution2(forecast.distributions, statewide.distributions)
 
-    # Calculate district-specific results
-    dcnm.out = district.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate, analysis.districts)
-    district.cases = dcnm.out[[1]]
-    district.distributions = fix.labels(dcnm.out[[2]])
+    # Calculate location-specific results
+    dcnm.out = location.cases.null.model(human.data, n.years, model.name, week.id, n.draws, point.estimate, analysis.locations)
+    location.cases = dcnm.out[[1]]
+    location.distributions = fix.labels(dcnm.out[[2]])
 
     # Update outputs
-    forecasts.df = update.df2(forecasts.df, district.cases)
-    forecast.distributions = update.distribution2(forecast.distributions, district.distributions)
+    forecasts.df = update.df2(forecasts.df, location.cases)
+    forecast.distributions = update.distribution2(forecast.distributions, location.distributions)
   }
 
   # Calculate annual human incidence
@@ -1809,14 +1847,14 @@ run.null.models = function(forecast.targets, forecasts.df, forecast.distribution
     forecasts.df = update.df2(forecasts.df, statewide.MLE)
     forecast.distributions = update.distribution2(forecast.distributions, statewide.MLE.distributions)
 
-    # Calculate district-specific results
-    dcnm.out = district.mle.null.model(md.data, n.years, model.name, week.id, n.draws, point.estimate)
-    district.MLE = dcnm.out[[1]]
-    district.distributions = fix.labels(dcnm.out[[2]])
+    # Calculate location-specific results
+    dcnm.out = location.mle.null.model(md.data, n.years, model.name, week.id, n.draws, point.estimate)
+    location.MLE = dcnm.out[[1]]
+    location.distributions = fix.labels(dcnm.out[[2]])
 
     # Update outputs
-    forecasts.df = update.df2(forecasts.df, district.MLE)
-    forecast.distributions = update.distribution2(forecast.distributions, district.distributions)
+    forecasts.df = update.df2(forecasts.df, location.MLE)
+    forecast.distributions = update.distribution2(forecast.distributions, location.distributions)
 
   }
 
@@ -1834,8 +1872,8 @@ run.null.models = function(forecast.targets, forecasts.df, forecast.distribution
     seasonal.cases = seasonal.incidence(human.data, focal.year, mean.annual.cases)
 
     # results needs to include these things:
-    #weeks.cases = Districts.With.Cases.Focal.Week, annual.positive.district.weeks = positivesthisyear, multiplier = multiplier, annual.human.cases = human.cases)
-    #new.row = c(model.name, forecast.id, annual.positive.district.weeks, annual.human.cases, multiplier, weeks.cases)
+    #weeks.cases = locations.With.Cases.Focal.Week, annual.positive.location.weeks = positivesthisyear, multiplier = multiplier, annual.human.cases = human.cases)
+    #new.row = c(model.name, forecast.id, annual.positive.location.weeks, annual.human.cases, multiplier, weeks.cases)
 
     # Somehow get the focal week out of seasonal cases.
     week.doy = get.DOY(focal.year, focal.month, focal.day)
@@ -1925,8 +1963,8 @@ statewide.mle.null.model = function(md.data, n.years, model.name, week.id, n.dra
 
   # Calculate mosquito MLE's statewide
   MLE.vec = c()
-  for (year in unique(md.data$YEAR)){
-    year.MLE = md.data[md.data$YEAR == year, ]
+  for (year in unique(md.data$year)){
+    year.MLE = md.data[md.data$year == year, ]
     seasonal.mosquito.MLE = mean(year.MLE$IR, na.rm = TRUE) #**# Average is problematic here, but I am not sure of a better approach at this point
     MLE.vec = c(MLE.vec, seasonal.mosquito.MLE)
   }
@@ -1949,7 +1987,7 @@ statewide.mle.null.model = function(md.data, n.years, model.name, week.id, n.dra
   }else{
     # Draw from historical values
     #**# really should think about smoothing this distribution out)
-    #**# An easy way would be to do the process at the district level, then average across disticts. That would produce continuous statewide counts, and have the benefit of making the predictions align
+    #**# An easy way would be to do the process at the location level, then average across disticts. That would produce continuous statewide counts, and have the benefit of making the predictions align
     distribution.samples = sample(MLE.vec, n.draws, replace = TRUE) # SAMPLE WITH REPLACEMENT FROM THE ANNUAL HUMAN CASES #**# LEFT OFF HERE
     statewide.distributions = cbind(statewide.distributions, matrix(distribution.samples, nrow = 1))
   }
@@ -1957,49 +1995,49 @@ statewide.mle.null.model = function(md.data, n.years, model.name, week.id, n.dra
   return(list(statewide.MLE, statewide.distributions))
 }
 
-#' Calculate null model results for each district
+#' Calculate null model results for each location
 #'
 #' @noRd
 #'
-district.mle.null.model = function(md.data, n.years, model.name, week.id, n.draws, point.estimate){
+location.mle.null.model = function(md.data, n.years, model.name, week.id, n.draws, point.estimate){
   # unpack week.id
   UNIT = splitter(as.character(week.id), ":", 1, 1)
   date = splitter(as.character(week.id), ":", 2, 1)
   year = splitter(date, "-", 1, 0)
 
-  districts = unique(md.data$COUNTY) #**# Watch for problems for other spatial units
+  locations = unique(md.data$location)
 
-  # Data frame will be populated with values by looping through districts
-  district.MLE = data.frame(model.name = model.name, forecast.id = rep(NA, length(districts)),
+  # Data frame will be populated with values by looping through locations
+  location.MLE = data.frame(model.name = model.name, forecast.id = rep(NA, length(locations)),
                               forecast.target = "seasonal.mosquito.MLE",
                               UNIT = UNIT, date = date, year = year, value = NA)
 
   # Similar for distributions, except distributions will be added as a matrix with cbind later
-  district.distributions = data.frame(model.name = model.name, forecast.id = rep(NA, length(districts)),
+  location.distributions = data.frame(model.name = model.name, forecast.id = rep(NA, length(locations)),
                                       forecast.target = "seasonal.mosquito.MLE",
                                       UNIT = UNIT, date = date, year = year)
-  # Loop over districts
-  for (i in seq_len(length(districts))){
+  # Loop over locations
+  for (i in seq_len(length(locations))){
 
-    district = districts[i]
-    forecast.id = sprintf("%s:%s", week.id, district)
+    location = locations[i]
+    forecast.id = sprintf("%s:%s", week.id, location)
 
-    md.data.subset = md.data[md.data$COUNTY == district, ]
+    md.data.subset = md.data[md.data$location == location, ]
 
     MLE.vec = c()
-    for (year in unique(md.data.subset$YEAR)){
-      year.MLE = md.data.subset[md.data.subset$YEAR == year, ]
+    for (year in unique(md.data.subset$year)){
+      year.MLE = md.data.subset[md.data.subset$year == year, ]
       seasonal.mosquito.MLE = mean(year.MLE$IR, na.rm = TRUE) #**# Average is problematic here, but I am not sure of a better approach at this point
       MLE.vec = c(MLE.vec, seasonal.mosquito.MLE)
     }
     mean.seasonal.mosquito.MLE = mean(MLE.vec, na.rm = TRUE)
 
-    # update district.MLE dataframe
-    district.MLE$forecast.id[i] = forecast.id
-    district.MLE$value[i] = mean.seasonal.mosquito.MLE
+    # update location.MLE dataframe
+    location.MLE$forecast.id[i] = forecast.id
+    location.MLE$value[i] = mean.seasonal.mosquito.MLE
 
     # Update distributions
-    district.distributions$forecast.id[i] = forecast.id
+    location.distributions$forecast.id[i] = forecast.id
     if (point.estimate == 1){
       if (i == 1){  distributions.matrix = matrix(rep(mean.seasonal.mosquito.MLE, n.draws), nrow = 1)
       }else{
@@ -2018,18 +2056,18 @@ district.mle.null.model = function(md.data, n.years, model.name, week.id, n.draw
   }
 
   #**# Watch for issues with the distributions.matrix
-  distributions.matrix = matrix(distributions.matrix, nrow = length(districts)) # Ensure that it is a matrix, even if there is only one district and R changes the matrix to a row
-  district.distributions = cbind(district.distributions, distributions.matrix)
+  distributions.matrix = matrix(distributions.matrix, nrow = length(locations)) # Ensure that it is a matrix, even if there is only one location and R changes the matrix to a row
+  location.distributions = cbind(location.distributions, distributions.matrix)
 
-  return(list(district.MLE, district.distributions))
+  return(list(location.MLE, location.distributions))
 
 }
 
 
 #' Update Observations
 #'
-#' @param observations.df A data frame with five fields: district, year, district_year, forecast.target, and value.
-#' Value contains the observed value for the district and year for the corresponding forecast.target
+#' @param observations.df A data frame with five fields: location, year, location_year, forecast.target, and value.
+#' Value contains the observed value for the location and year for the corresponding forecast.target
 #' @param in.data The data set containing the observations. Must correspond to the forecast.target.
 #' @param forecast.target The quantity being predicted. Should be one of the following:
 #' 'annual.human.cases', 'seasonal.mosquito.MLE'
@@ -2037,7 +2075,7 @@ district.mle.null.model = function(md.data, n.years, model.name, week.id, n.draw
 #' @noRd
 #' @return observations.df An updated observations.df object
 #'
-update.observations = function(observations.df, in.data, forecast.target, id.string, year, analysis.districts){
+update.observations = function(observations.df, in.data, forecast.target, id.string, year, analysis.locations){
 
   # User should never see this message. More likely to be an issue during development
   if (!forecast.target %in% c('annual.human.cases', 'seasonal.mosquito.MLE')){
@@ -2046,55 +2084,55 @@ update.observations = function(observations.df, in.data, forecast.target, id.str
 
   # Update human cases
   if (forecast.target == 'annual.human.cases'){
-    # Make sure district is treated as character
-    in.data$district = as.character(in.data$district)
+    # Make sure location is treated as character
+    in.data$location = as.character(in.data$location)
 
     # Human data is in format of one case per year, so nrow works the same as a sum
     year.data = in.data[in.data$year == year, ]
     year.human.cases = nrow(year.data)
 
-    # Update value across all districts #**# NEED TO CHANGE STATEWIDE, but there to be consistent with other pieces of the code
+    # Update value across all locations #**# NEED TO CHANGE STATEWIDE, but there to be consistent with other pieces of the code
     unit.id = sprintf('%s-STATEWIDE', id.string)
     new.record = c(unit.id, year, sprintf("%s_%s", unit.id, year), forecast.target, year.human.cases)
     observations.df = rbind(observations.df, new.record)
 
-    # Update values for each district
-    districts = unique(in.data$district)
-    for (i in seq_len(length(districts))){
-      district = districts[i]
-      district.subset = year.data[year.data$district == district, ]
-      district.cases = nrow(district.subset)
-      new.record = c(district, year, sprintf("%s_%s", district, year), forecast.target, district.cases)
+    # Update values for each location
+    locations = unique(in.data$location)
+    for (i in seq_len(length(locations))){
+      location = locations[i]
+      location.subset = year.data[year.data$location == location, ]
+      location.cases = nrow(location.subset)
+      new.record = c(location, year, sprintf("%s_%s", location, year), forecast.target, location.cases)
       observations.df = rbind(observations.df, new.record)
     }
 
-    # Update values for each district in analysis.districts that has never had a human case in the date range
+    # Update values for each location in analysis.locations that has never had a human case in the date range
     # Those with one case will have nrow = 0, but those that have never had a case just don't show up.
-    missed.districts = analysis.districts[!analysis.districts %in% districts]
-    for (district in missed.districts){
-      new.record = c(district, year, sprintf("%s_%s", district, year), forecast.target, 0)
+    missed.locations = analysis.locations[!analysis.locations %in% locations]
+    for (location in missed.locations){
+      new.record = c(location, year, sprintf("%s_%s", location, year), forecast.target, 0)
       observations.df = rbind(observations.df, new.record)
     }
   }
 
   # Calculate observations for seasonal mosquito infection rate
   if (forecast.target == 'seasonal.mosquito.MLE'){
-    year.MLE = in.data[in.data$YEAR == year, ]
+    year.MLE = in.data[in.data$year == year, ]
     seasonal.mosquito.MLE = mean(year.MLE$IR, na.rm = TRUE) #**# Average is problematic here, but I am not sure of a better approach at this point
     unit.id = sprintf('%s-STATEWIDE', id.string)
     new.record = c(unit.id, year, sprintf("%s_%s", unit.id, year), forecast.target, seasonal.mosquito.MLE)
     observations.df = rbind(observations.df, new.record)
 
-    # Update values for each district # Field is still COUNTY in the mosquito data due to historical reasons. This could be updated
-    districts = unique(in.data$COUNTY)
-    for (i in seq_len(length(districts))){
+    # Update values for each location # Field is still COUNTY in the mosquito data due to historical reasons. This could be updated
+    locations = unique(in.data$location)
+    for (i in seq_len(length(locations))){
       # Given that data have been subset by year, all that should be left is county data. Can just pull from the county row
-      district = districts[i]
+      location = locations[i]
 
       # Note: right now, CI information associated with the observations are being lost.
       # With a move to probablistic thinking, this is not optimal, as we could have probabilitic observations, too. #**# Except CRPS does not support that, to my knowledge.
-      district.cases = year.MLE$IR[i]
-      new.record = c(district, year, sprintf("%s_%s", district, year), forecast.target, district.cases)
+      location.cases = year.MLE$IR[i]
+      new.record = c(location, year, sprintf("%s_%s", location, year), forecast.target, location.cases)
       observations.df = rbind(observations.df, new.record)
     }
   }
@@ -2129,12 +2167,12 @@ dfmip.to.cdc.challenge.format = function(model.name, forecast.distributions, out
   forecast.distributions = forecast.distributions[forecast.distributions$model.name == model.name, ]
 
   # Split out forecast ID
-  districts = sapply(forecast.distributions$forecast.id, dfmip::splitter, ":", 3, 1)
-  forecast.distributions$district = districts
+  locations = sapply(forecast.distributions$forecast.id, dfmip::splitter, ":", 3, 1)
+  forecast.distributions$location = locations
 
   # Drop any statewide estimates
-  statewide =  grep("STATEWIDE", districts)
-  index = rep(1, length(districts))
+  statewide =  grep("STATEWIDE", locations)
+  index = rep(1, length(locations))
   index[statewide] = 0
   forecast.distributions = forecast.distributions[index == 1, ]
 
@@ -2156,14 +2194,14 @@ dfmip.to.cdc.challenge.format = function(model.name, forecast.distributions, out
   # Loop through entries in forecast.distributions
   for (i in 1:nrow(forecast.distributions)){
 
-    this.district = forecast.distributions$district[i]
+    this.location = forecast.distributions$location[i]
     this.record = forecast.distributions[i, 7:(6+n.draws)]
 
     # For each county:
     # Add the point estimate first
     point.value = unname(apply(this.record, c(1), mean, na.rm = TRUE))
 
-    point.forecast = data.frame(location = this.district, target = cdc.target, type = "Point",
+    point.forecast = data.frame(location = this.location, target = cdc.target, type = "Point",
                                 unit = 'cases', bin_start_inclusive = "NA", bin_end_notinclusive = "NA",
                                 value = point.value)
     cdc.forecast = rbind(cdc.forecast, point.forecast)
@@ -2185,7 +2223,7 @@ dfmip.to.cdc.challenge.format = function(model.name, forecast.distributions, out
       bin.value = bin.count / n.draws
 
       # Update dataframe
-      bin.forecast = data.frame(location = this.district, target = cdc.target,
+      bin.forecast = data.frame(location = this.location, target = cdc.target,
                                 type = 'Bin', unit = 'cases', bin_start_inclusive = first.bin,
                                 bin_end_notinclusive = next.bin, value = bin.value)
       cdc.forecast = rbind(cdc.forecast, bin.forecast)
@@ -2206,26 +2244,26 @@ dfmip.to.cdc.challenge.format = function(model.name, forecast.distributions, out
   return(cdc.forecast)
 }
 
-#' Configure analysis districts
+#' Configure analysis locations
 #'
 #' @noRd
 #'
-configure.analysis.districts = function(analysis.districts, forecast.targets, human.data, mosq.data){
+configure.analysis.locations = function(analysis.locations, forecast.targets, human.data, mosq.data){
 
-  if (analysis.districts[1] == 'default'){
+  if (analysis.locations[1] == 'default'){
     # If mosquito data in forecast targets, restrict to mosquito data set
     if ('seasonal.mosquito.MLE' %in% forecast.targets){
-      analysis.districts = unique(mosq.data$district)
+      analysis.locations = unique(mosq.data$location)
 
     # Otherwise, restrict to human data set
     }else{
-      analysis.districts = unique(human.data$district)
+      analysis.locations = unique(human.data$location)
     }
   }
 
   # Ensure output is character, not factor
-  analysis.districts = as.character(analysis.districts)
-  return(analysis.districts)
+  analysis.locations = as.character(analysis.locations)
+  return(analysis.locations)
 }
 
 #' Expand human data
@@ -2235,52 +2273,52 @@ configure.analysis.districts = function(analysis.districts, forecast.targets, hu
 #' detailed format, and this is not suitable for ArboMAP, as the dates are not accurate. However, it enables a common
 #' workflow for all models, and that is highly desirable (i.e. the goal of the project)
 #'
-#' @param cases Human cases summarized by district and year
+#' @param cases Human cases summarized by location and year
 #' @param arbitrary.date The month and day to fill into the returned date field. This will be the same for all entries
 #' @param case.field The field containing counts of human cases
 #' @param year.field The field containing the year of the human cases
-#' @param district.field The field containing the spatial extent of the human cases (e.g., county)
+#' @param location.field The field containing the spatial extent of the human cases (e.g., county)
 #'
-#' @return human.data Data in the standardized dfmip input format, with a column for date, and a column for district.
-#' District-years with no cases are omitted, consequently an assumption of no missing data within years is made.
+#' @return human.data Data in the standardized dfmip input format, with a column for date, and a column for location.
+#' location-years with no cases are omitted, consequently an assumption of no missing data within years is made.
 #'
 #' @export
-expand.human.data = function(cases, arbitrary.date = "08-01", case.field = "count", year.field = 'year', district.field = 'district'){
+expand.human.data = function(cases, arbitrary.date = "08-01", case.field = "count", year.field = 'year', location.field = 'location'){
 
   #**# May want to add an optional field mapping, to allow users to input their own column names
 
   # Create human.data object
-  human.data = data.frame(date = NA, district = NA)
+  human.data = data.frame(date = NA, location = NA)
 
   years = unique(cases[[year.field]])
-  districts = unique(cases[[district.field]])
+  locations = unique(cases[[location.field]])
 
   # Loop through years
   for (year in years){
     year.subset = cases[cases[[year.field]] == year, ]
 
-    # Loop through districts
-    for (district in districts){
+    # Loop through locations
+    for (location in locations){
 
-      district.subset = year.subset[year.subset[[district.field]] == district, ]
+      location.subset = year.subset[year.subset[[location.field]] == location, ]
 
       # Check that one or no rows are selected, otherwise throw an error
-      if (nrow(district.subset) > 1){
-        m1 = sprintf("More than one result found for a district and a year (%s rows).", nrow(district.subset))
-        m2 = sprintf("Please inspect data for district %s and year %s", district, year)
+      if (nrow(location.subset) > 1){
+        m1 = sprintf("More than one result found for a location and a year (%s rows).", nrow(location.subset))
+        m2 = sprintf("Please inspect data for location %s and year %s", location, year)
         stop(sprintf("%s%s", m1, m2))
       }
 
-      # If nrow == 0, no action needed, just skip that district-year
-      if (nrow(district.subset) == 1){
+      # If nrow == 0, no action needed, just skip that location-year
+      if (nrow(location.subset) == 1){
         # Fill in human.data object
-        n.cases = district.subset[[case.field]][1]
+        n.cases = location.subset[[case.field]][1]
         for (i in seq_len(n.cases)){
           #new.date = sprintf("%s-%s", year, arbitrary.date)
           month = splitter(arbitrary.date, '-', 1, 1)
           day = splitter(arbitrary.date, '-', 2, 1)
           new.date = sprintf("%s/%s/%s", month, day, year)
-          new.record = c(new.date, district)
+          new.record = c(new.date, location)
           human.data = rbind(human.data, new.record)
         }
       }
@@ -2293,5 +2331,66 @@ expand.human.data = function(cases, arbitrary.date = "08-01", case.field = "coun
   return(human.data)
 }
 
+#' District to location
+#'
+#' Could be generalized even
+#' Copy in rf1 as well
+#'
+#' @noRd
+district.to.location = function(in.data, data.label, old.name = 'district', new.name = 'location'){
+
+  fields = colnames(in.data)
+  new.name.regex = sprintf("\\b%s\\b", new.name)
+  old.name.regex = sprintf("\\b%s\\b", old.name)
+  new.pos = grep(new.name.regex, fields)
+  old.pos = grep(old.name.regex, fields)
+
+  if (length(new.pos) == 0){
+    # If the old name is present and the new name is absent, rename the field
+    if (length(old.pos) == 1){
+      colnames(in.data)[old.pos] = new.name
+      warning(sprintf("%s field missing. Substituting values from %s field", new.name, old.name))
+    }
+    if (length(old.pos) == 0){
+      stop(sprintf("Required 'location' field is missing. Field names are %s", paste(fields, collapse = ', ')))
+    }
+    if (length(old.pos) > 1){
+      stop(sprintf("More than one field returned for %s. Probably an error with the regular expressions. Ideally just include a %s field", old.name, new.name))
+    }
+  }
+
+  new.name_year = sprintf("%s_year", new.name)
+  new.name_year.regex = sprintf("\\b%s\\b", new.name_year)
+  new.name_year.pos = grep(new.name_year.regex, fields)
+
+  if (length(new.name_year.pos) == 0){
+    # Search for variables associated with the old year
+    old.name_year = sprintf("%s_year", old.name)
+    old.name_year.regex = sprintf("\\b%s\\b", old.name_year)
+    old.name_year.pos = grep(old.name_year.regex, fields)
+
+    # This check must precede the next, otherwise the new.name_year field will exist!
+    if (length(old.name_year.pos) == 0){
+      # If the field is not there, generate the location_year field from the location and year fields
+      in.data[[new.name_year]] = sprintf("%s_%s", in.data[[new.name]], in.data[["year"]])
+
+      # Check that this was successful
+      if (length(in.data[[new.name_year]]) == 0){
+        stop(sprintf("Something went wrong with generation of the %s_year field for data set %s", new.name, data.label))
+      }
+    }
+
+    if (length(old.name_year.pos) == 1){
+      warning(sprintf("%s field missing. Subsituting values from %s field", new.name_year, old.name_year))
+      colnames(in.data)[old.name_year.pos] = new.name_year
+    }
+
+    if (length(old.name_year.pos) > 1){
+      stop(sprintf("More than one field returned for %s. Probably an error with the regular expressions. Ideally just include a %s field", old.name_year, new.name_year))
+    }
+  }
+
+  return(in.data)
+}
 
 

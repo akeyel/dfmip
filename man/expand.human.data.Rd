@@ -6,10 +6,10 @@
 \usage{
 expand.human.data(cases, arbitrary.date = "08-01",
   case.field = "count", year.field = "year",
-  district.field = "district")
+  location.field = "location")
 }
 \arguments{
-\item{cases}{Human cases summarized by district and year}
+\item{cases}{Human cases summarized by location and year}
 
 \item{arbitrary.date}{The month and day to fill into the returned date field. This will be the same for all entries}
 
@@ -17,11 +17,11 @@ expand.human.data(cases, arbitrary.date = "08-01",
 
 \item{year.field}{The field containing the year of the human cases}
 
-\item{district.field}{The field containing the spatial extent of the human cases (e.g., county)}
+\item{location.field}{The field containing the spatial extent of the human cases (e.g., county)}
 }
 \value{
-human.data Data in the standardized dfmip input format, with a column for date, and a column for district.
-District-years with no cases are omitted, consequently an assumption of no missing data within years is made.
+human.data Data in the standardized dfmip input format, with a column for date, and a column for location.
+location-years with no cases are omitted, consequently an assumption of no missing data within years is made.
 }
 \description{
 Takes human cases from a single row for each county and year, and adds individual rows for each county reporting cases

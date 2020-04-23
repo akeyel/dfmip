@@ -78,7 +78,7 @@ assess.accuracy = function(predictions.mat, observations.vec, model.vec, locatio
   }
 
   # Create a data frame to hold accuracy metric results
-  accuracy.metrics = data.frame(model = NA, district = NA, forecast.target, metric = NA, year = NA, value = NA)
+  accuracy.metrics = data.frame(model = NA, location = NA, forecast.target, metric = NA, year = NA, value = NA)
   #accuracy.metrics = list(CRPS = NA, RMSE = NA, Scaled_RMSE = NA, within_percentage = NA,
   #                        within_threshold = NA, within_threshold_or_percentage = NA, AUC = NA)
 
