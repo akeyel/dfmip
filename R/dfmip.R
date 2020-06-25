@@ -381,12 +381,14 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
   # Run the Functional Linear Modeling approach
   if ("FLM" %in% models.to.run){
 
+    stop("Technical difficulties with FLM package. Hopefully resolved soon.")
+
     # Check that package is installed
     my.package = "flm" #"flm_NE_WNV"
     package.path = 'khelmsmith/flm_NE_WNV'
-    if(!requireNamespace('flm')){
-      stop(sprintf('%s package must be installed. You can do this with devtools::install_github("%s")', my.package, package.path))
-    }
+    #if(!requireNamespace('flm')){
+    #  stop(sprintf('%s package must be installed. You can do this with devtools::install_github("%s")', my.package, package.path))
+    #}
 
     message("Running Functional Linear Modeling model")
 
@@ -396,8 +398,8 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
     flm.inputs = model.inputs$flm.inputs
 
-    flm.out = flm::run.flm(human.data, weather.data, flm.inputs, weekinquestion,
-                      results.path, in.seed = 4872957)
+    #flm.out = flm::run.flm(human.data, weather.data, flm.inputs, weekinquestion,
+    #                  results.path, in.seed = 4872957)
 
     flm.results = flm.out[[1]]
     flm.distributions = flm.out[[1]] #**# Change to 2 when that object is created
