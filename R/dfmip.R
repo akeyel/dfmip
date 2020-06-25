@@ -107,6 +107,9 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
   # Check that the appropriate input objects have been provided for the desired models
   check.model.inputs(models.to.run, model.inputs)
 
+  # Check that the week.id is properly configured.
+  check.week.id(week.id)
+
   # Check that location and location_year fields are present in data set
   # Restrict data analysis to analysis.locations and check that required fields are present
   if (!length(human.data) == 1){
@@ -284,9 +287,16 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
       warning("Analysis locations in rf1.inputs over-ridden by the analysis locations supplied to dfmip as an input")
     }
 
+    quantile.model = 1
+    if (length(rf1.inputs) > 7){
+      if (rf1.inputs[[8]] == 0){
+        quantile.model = 0
+      }
+    }
+
     RF1.out = rf1::rf1(forecast.targets, human.data, mosq.data, weather.data,
                       weekinquestion, rf1.inputs.no.extras, rf1.results.path, UNIT,
-                      use.testing.objects = is.test, n.draws = n.draws)
+                      use.testing.objects = is.test, n.draws = n.draws, quantile.model = quantile.model)
 
     RF1.results = RF1.out[[1]]
     RF1.forecast.distributions = RF1.out[[2]]
@@ -334,14 +344,21 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
     rf1.results.path = sprintf("%s/rf1_results", results.path)
     if (!file.exists(rf1.results.path)){ dir.create(rf1.results.path, recursive = TRUE)  }
 
+    quantile.model = 1
+    if (length(rf1.inputs) > 7){
+      if (rf1.inputs[[8]] == 0){
+        quantile.model = 0
+      }
+    }
+
     RF1.out = rf1::rf1(forecast.targets, human.data, mosq.data, weather.data,
                       weekinquestion, rf1.inputs, rf1.results.path, UNIT,
-                      use.testing.objects = is.test, n.draws = n.draws)
+                      use.testing.objects = is.test, n.draws = n.draws, quantile.model = quantile.model)
 
     RF1.results = RF1.out[[1]]
     RF1.forecast.distributions = RF1.out[[2]]
     RF1.bins = RF1.out[[3]]
-    other.outputs$rf1c = RF1.out[[4]]
+    other.outputs$rf1a = RF1.out[[4]]
 
     # Update Results and Distribution objects with output from the Random Forest model (both forecast targets come out merged)
     RF1.model.name = "RF1_A"
@@ -448,6 +465,8 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 #' human.model\tab The Random Forest model to use for forecasting human
 #' cases. If this is to be fitted from the empirical data, this should be set
 #' to NA.\cr
+#' quantile.model\tab if set to any value except 0, a quantile Random Forest
+#' will be run. \cr
 #' no.data.exceptions\taba #**# COMING SOON A list of county-years within the
 #' range of analysis.years and analysis.counties that are missing data rather
 #' than 0's\cr}
@@ -2187,9 +2206,10 @@ dfmip.to.cdc.challenge.format = function(model.name, forecast.distributions, out
 
   # Create a forecast dataframe to contain results
   cdc.target = "Total WNV neuroinvasive disease cases"
+  #**# Names updated to match CDC template from 4/20/2020
   cdc.forecast = data.frame(location = NA, target = cdc.target,
-                            type = 'Bin', unit = 'cases', bin_start_inclusive = NA,
-                            bin_end_notinclusive = NA, value = NA)
+                            type = 'Bin', unit = 'cases', bin_start_incl = NA,
+                            bin_end_notincl = NA, value = NA)
 
   # Loop through entries in forecast.distributions
   for (i in 1:nrow(forecast.distributions)){
@@ -2201,9 +2221,14 @@ dfmip.to.cdc.challenge.format = function(model.name, forecast.distributions, out
     # Add the point estimate first
     point.value = unname(apply(this.record, c(1), mean, na.rm = TRUE))
 
+    # Template names were updated
+    #point.forecast = data.frame(location = this.location, target = cdc.target, type = "Point",
+    #                            unit = 'cases', bin_start_inclusive = "NA", bin_end_notinclusive = "NA",
+    #                            value = point.value)
     point.forecast = data.frame(location = this.location, target = cdc.target, type = "Point",
-                                unit = 'cases', bin_start_inclusive = "NA", bin_end_notinclusive = "NA",
+                                unit = 'cases', bin_start_incl = "NA", bin_end_notincl = "NA",
                                 value = point.value)
+
     cdc.forecast = rbind(cdc.forecast, point.forecast)
 
     # Calculate probabilities for each bin
@@ -2223,9 +2248,13 @@ dfmip.to.cdc.challenge.format = function(model.name, forecast.distributions, out
       bin.value = bin.count / n.draws
 
       # Update dataframe
+      #bin.forecast = data.frame(location = this.location, target = cdc.target,
+      #                          type = 'Bin', unit = 'cases', bin_start_inclusive = first.bin,
+      #                          bin_end_notinclusive = next.bin, value = bin.value)
       bin.forecast = data.frame(location = this.location, target = cdc.target,
-                                type = 'Bin', unit = 'cases', bin_start_inclusive = first.bin,
-                                bin_end_notinclusive = next.bin, value = bin.value)
+                                type = 'Bin', unit = 'cases', bin_start_incl = first.bin,
+                                bin_end_notincl = next.bin, value = bin.value)
+
       cdc.forecast = rbind(cdc.forecast, bin.forecast)
 
       # Update lower bin
@@ -2391,6 +2420,150 @@ district.to.location = function(in.data, data.label, old.name = 'district', new.
   }
 
   return(in.data)
+}
+
+# Check that the week.id is properly configured.
+check.week.id = function(week.id){
+
+  is.error = 0
+  err.message = ""
+
+  if (length(grep(":", week.id)) == 0){
+    is.error = 1
+    this.error = "week.id must consist of a string and a date delimited by a colon (:)\n"
+    err.message = sprintf("%s%s", err.message, this.error)
+  }
+
+  # week.id format is UNIT:YYYY-MM-DD
+  UNIT = strsplit(week.id, ":")[[1]][1]
+  date = strsplit(week.id, ":")[[1]][2]
+
+  if (is.na(UNIT)){
+    is.error = 1
+    this.error = "UNIT (a descriptive character string) is missing from the week.id input\n"
+    err.message = sprintf("%s%s", err.message, this.error)
+  }
+
+  if (is.na(date)){
+    is.error = 1
+    this.error = "Date (YYYY-MM-DD) is missing from the week.id input\n"
+    err.message = sprintf("%s%s", err.message, this.error)
+  }else{
+    parts = strsplit(date, "-")[[1]]
+    if (length(parts) != 3){
+      is.error = 1
+      this.error = "Date must be delimited by hyphens (-) in YYYY-MM-DD format\n"
+      err.message = sprintf("%s%s", err.message, this.error)
+    }else{
+      year = parts[1]
+      month = parts[2]
+      day = parts[3]
+
+      if (nchar(year) != 4){
+        is.error = 1
+        this.error = "Year must have four characters (YYYY)\n"
+        err.message = sprintf("%s%s", err.message, this.error)
+      }
+      if (nchar(month) != 2){
+        is.error = 1
+        this.error = "Month must have two characters (MM)\n"
+        err.message = sprintf("%s%s", err.message, this.error)
+      }
+      if (nchar(day) != 2){
+        is.error = 1
+        this.error = "Day must have two characters (DD)\n"
+        err.message = sprintf("%s%s", err.message, this.error)
+      }
+    }
+  }
+
+  if (is.error == 1){ stop(err.message)  }
+
+  return(is.error)
+}
+
+
+#' Bin plotting function for the cdc forecast bins
+#'
+#' Create a bar plot for each bin to visualize the predictions. Predictions are inclusive of the bottom number,
+#' and exclusive of the start of the next bin
+#'
+#' @param cdc.bins Data in the CDC template bin format
+#' @param out.pdf The pdf of plots to be generated
+#'
+#' @export
+plot.bins = function(cdc.bins, out.pdf){
+  cdc.bins = cdc.bins[cdc.bins$type == "Bin", ] # Remove point estimates
+
+  pdf(out.pdf)
+
+  locations = unique(cdc.bins$location)
+  # One plot per location
+  for (location in locations){
+    # Subset to location
+    these.bins = cdc.bins[cdc.bins$location == location, ]
+
+    # Sort by bin start
+    these.bins = these.bins[order(as.numeric(as.character(these.bins$bin_start_incl))), ]
+    # Add a plot order column
+    these.bins$plot.order = seq(1, nrow(these.bins))
+
+    barplot(these.bins$value, ylab = "Probability", xlab = sprintf("Case Count Bins: %s", location), names.arg = these.bins$bin_start_incl)
+
+
+  }
+
+  dev.off()
+}
+
+#' Make a table with min, max, and mean values by location
+#'
+#' Goal is to plot out the extremes and the mean for each county in the US. May take a short while to run (~1min).
+#'
+#' @param forecast.distributions The forecast.distributions output from the dfmip function. The first 6 columns are informational,
+#' followed by n.draw prediction columns, followed by any columns added subsequently by the user.
+#' @param n.draws The number of columns corresponding to forecast predictions
+#'
+#' @export
+#'
+mean.min.max.table = function(forecast.distributions, outfile, n.draws){
+
+  fips.lookup = wnvdata::fips.lookup
+
+  forecast.distributions$location = sapply(forecast.distributions$forecast.id, dfmip::splitter, ":", 3, 1)
+  map.df = data.frame(location = forecast.distributions$location, min = NA, mean = NA, max = NA)
+
+  # Ensure the forecasts are numeric
+  for (col in 1:ncol(forecast.distributions)){
+    if (col > 6){
+      if (col <= (n.draws + 6)){
+        forecast.distributions[ ,col] = as.numeric(as.character(forecast.distributions[ , col]))
+      }
+    }
+  }
+
+  # Identify min, max, and mean values
+  for (i in 1:nrow(forecast.distributions)){
+
+    this.location = forecast.distributions$location[i]
+    this.record = forecast.distributions[i, 7:(6+n.draws)]
+
+    # For each county:
+    # Add the point estimate first
+    map.df$mean[i] = unname(apply(this.record, c(1), mean, na.rm = TRUE))
+    map.df$min[i] = unname(apply(this.record, c(1), min, na.rm = TRUE))
+    map.df$max[i] = unname(apply(this.record, c(1), max, na.rm = TRUE))
+  }
+
+  # Add FIPS for merge with census data
+  map.df2 = merge(map.df, fips.lookup, by = 'location')
+  map.df2$county = NULL
+  map.df2$state.fips = NULL
+
+  # Export for use in ArcGIS
+  write.table(map.df2, outfile, sep = ',', col.names = TRUE, row.names = FALSE)
+
+  return(map.df2)
 }
 
 

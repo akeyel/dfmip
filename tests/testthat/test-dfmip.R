@@ -943,3 +943,41 @@ test_that("district.to.location function works", {
 
 })
 
+
+test_that("week.id check works", {
+
+  # Test a valid week id
+  week.id = "USA:2012-05-14"
+  is.error = check.week.id(week.id)
+  expect_equal(is.error, 0)
+
+  # Check a week ID missing the unit
+  week.id = "2012-05-14"
+  expect_error(check.week.id(week.id)) # Line matches output, but R doesn't think so. Not sure why.
+  # "week.id must consist of a string and a date delimited by a colon (:)\nDate (YYYY-MM-DD) is missing from the week.id input\n"
+
+  # Check a week ID missing the date
+  week.id = "USA"
+  expect_error(check.week.id(week.id))
+  # "week.id must consist of a string and a date delimited by a colon (:)\nDate (YYYY-MM-DD) is missing from the week.id input\n"
+
+  # Check a week ID with a 2 digit year
+  week.id = "USA:12-05-14"
+  expect_error(check.week.id(week.id))
+  # Year must have four characters (YYYY)
+
+  # Date, where I forgot the hyphens
+  week.id = "USA:2012:1:14"
+  expect_error(check.week.id(week.id))
+  # Date must be delimited by hyphens (-) in YYYY-MM-DD format
+
+  week.id = "USA:2012-1-14"
+  expect_error(check.week.id(week.id))
+  # Month must have two characters (MM)
+
+  week.id = "USA:2012-01-1"
+  expect_error(check.week.id(week.id))
+  # Day must have two characters (DD)
+
+})
+
