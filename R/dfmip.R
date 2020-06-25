@@ -25,6 +25,7 @@ NULL
 #' @importFrom graphics barplot curve hist par plot segments text
 #' @importFrom stats aggregate as.formula cor dnorm median na.exclude optimize predict qchisq rnorm runif sd uniroot
 #' @importFrom utils read.csv write.table
+#' @importFrom grDevices pdf
 NULL
 # @import ArboMAP # Not listed - see !require statement that loads it later. Listed under Suggests in the dependency
 # @import rf1 # Not listed - see !require statement that loads it later. Listed under Suggests in the dependency
@@ -2522,6 +2523,7 @@ plot.bins = function(cdc.bins, out.pdf){
 #'
 #' @param forecast.distributions The forecast.distributions output from the dfmip function. The first 6 columns are informational,
 #' followed by n.draw prediction columns, followed by any columns added subsequently by the user.
+#' @param outfile The file to be written (including the path where it should be written to, if not in the current workspace)
 #' @param n.draws The number of columns corresponding to forecast predictions
 #'
 #' @export
