@@ -2,9 +2,9 @@ language: r
 cache: packages
 
 # Trying this
-repos: 
-  CRAN: https://cran.rstudio.com
-  rforge: http://R-Forge.R-project.org
+#repos: 
+#  CRAN: https://cran.rstudio.com
+#  rforge: http://R-Forge.R-project.org
 
 addons:
   apt:
