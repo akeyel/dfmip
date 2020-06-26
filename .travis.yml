@@ -1,18 +1,20 @@
 language: r
 cache: packages
 
-before_install:
-  - R -e 'install.packages("rgdal", repos=c("http://R-Forge.R-project.org", "http://cran.rstudio.com"))'
+# This did not help
+#before_install:
+#  - R -e 'install.packages("rgdal", repos=c("http://R-Forge.R-project.org", "http://cran.rstudio.com"))'
 
-addons:
-  apt:
-    packages:
-      - libudunits2-dev
-      - gdal-bin
-      - libgdal-dev
+# What happens when I remove rgdal? Where is the failure?
+#addons:
+#  apt:
+#    packages:
+#      - libudunits2-dev
+#      - gdal-bin
+#      - libgdal-dev
 
-r_binary_packages:
-  - rgdal
+#r_binary_packages:
+#  - rgdal
 
 r:
     - release
