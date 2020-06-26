@@ -13,7 +13,7 @@ addons:
       - gdal-bin
       - libgdal-dev
 
-#r_binary_packages:
+##r_binary_packages:
 #  - rgdal
 
 - R -e 'install.packages("rgdal", repos=c("http://R-Forge.R-project.org", "http://cran.rstudio.com"))'
