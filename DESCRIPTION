@@ -52,6 +52,7 @@ Suggests:
     rf1,
     ArboMAP,
     flm,
+    wnvdata,
     knitr,
     rmarkdown,
     testthat (>= 2.1.0),
