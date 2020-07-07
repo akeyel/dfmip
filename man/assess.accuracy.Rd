@@ -53,9 +53,3 @@ accuracy.metrics A list containing accuracy information. The list is
 High level handler function to decide which metrics to compute and then call
 the code to compute them. At present, only continuous and discrete outcomes are supported.
 }
-\examples{
-mat = matrix(rnorm(1000, 8, 1), ncol = 1)
-obs = rnorm(1000, 8, 1)
-assess.accuracy(mat, obs, c("TEST"), c("Test"), c(2015), "seasonal.mosquito.MLE")
-
-}

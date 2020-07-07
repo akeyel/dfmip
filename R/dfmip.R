@@ -383,52 +383,52 @@ dfmip.forecast = function(forecast.targets, models.to.run, human.data, mosq.data
 
     stop("Technical difficulties with FLM package. Hopefully resolved soon.")
 
-    # Check that package is installed
-    my.package = "flm" #"flm_NE_WNV"
-    package.path = 'khelmsmith/flm_NE_WNV'
-    #if(!requireNamespace('flm')){
-    #  stop(sprintf('%s package must be installed. You can do this with devtools::install_github("%s")', my.package, package.path))
-    #}
-
-    message("Running Functional Linear Modeling model")
-
-    # Set up the sub-model output results
-    model.results.path = sprintf("%s/%s_results", results.path, my.package)
-    if (!file.exists(model.results.path)){ dir.create(model.results.path, recursive = TRUE)  }
-
-    flm.inputs = model.inputs$flm.inputs
-
-    #flm.out = flm::run.flm(human.data, weather.data, flm.inputs, weekinquestion,
-    #                  results.path, in.seed = 4872957)
-
-    flm.results = flm.out[[1]]
-    flm.distributions = flm.out[[1]] #**# Change to 2 when that object is created
-    other.outputs$flm = flm.out[[3]]
-
-    # Update Results and Distribution objects with output from the Random Forest model (both forecast targets come out merged)
-    this.model.name = my.package
-    model.forecast.id = sprintf("%s:%s", week.id, flm.results$County)
-    #**# annual.human.cases is currently the only forecast target supported. if another is added, the below will need to be changed
-    flm.records = data.frame(model.name = this.model.name, forecast.id = model.forecast.id,
-                             forecast.target = 'annual.human.cases',
-                             UNIT = UNIT, date = date, year = year, value = flm.results$predcases)
-
-    forecasts.df = update.df2(forecasts.df, flm.records)
-
-    # Add zeros for counties that never had a human case, using analysis.locations
-    warning("Still need to add zeros to flm for counties that never had a human case of WNV")
-
-    flm.distribution.records = data.frame(model.name = this.model.name, forecast.id = model.forecast.id,
-                                          forecast.target = 'annual.human.cases',
-                                          UNIT = UNIT, date = date, year = year)
-    # Add data columns to the new data frame. At present, this is just the point estimate repeated n.draws times
-    #**# change when going from a point estimate to probabilisic estimates
-    for (i in seq_len(n.draws)){
-      flm.distribution.records = cbind(flm.distribution.records, flm.results$predcases)
-    }
-    draw.names = sprintf("DRAW%s", seq(1,n.draws))
-    colnames(flm.distribution.records) = c("model.name", "forecast.id", "forecast.target", "UNIT", "date", "year", draw.names)
-    forecast.distributions = update.distribution2(forecast.distributions, flm.distribution.records)
+    # # Check that package is installed
+    # my.package = "flm" #"flm_NE_WNV"
+    # package.path = 'khelmsmith/flm_NE_WNV'
+    # #if(!requireNamespace('flm')){
+    # #  stop(sprintf('%s package must be installed. You can do this with devtools::install_github("%s")', my.package, package.path))
+    # #}
+    #
+    # message("Running Functional Linear Modeling model")
+    #
+    # # Set up the sub-model output results
+    # model.results.path = sprintf("%s/%s_results", results.path, my.package)
+    # if (!file.exists(model.results.path)){ dir.create(model.results.path, recursive = TRUE)  }
+    #
+    # flm.inputs = model.inputs$flm.inputs
+    #
+    # #flm.out = flm::run.flm(human.data, weather.data, flm.inputs, weekinquestion,
+    # #                  results.path, in.seed = 4872957)
+    #
+    # flm.results = flm.out[[1]]
+    # flm.distributions = flm.out[[1]] #**# Change to 2 when that object is created
+    # other.outputs$flm = flm.out[[3]]
+    #
+    # # Update Results and Distribution objects with output from the Random Forest model (both forecast targets come out merged)
+    # this.model.name = my.package
+    # model.forecast.id = sprintf("%s:%s", week.id, flm.results$County)
+    # #**# annual.human.cases is currently the only forecast target supported. if another is added, the below will need to be changed
+    # flm.records = data.frame(model.name = this.model.name, forecast.id = model.forecast.id,
+    #                          forecast.target = 'annual.human.cases',
+    #                          UNIT = UNIT, date = date, year = year, value = flm.results$predcases)
+    #
+    # forecasts.df = update.df2(forecasts.df, flm.records)
+    #
+    # # Add zeros for counties that never had a human case, using analysis.locations
+    # warning("Still need to add zeros to flm for counties that never had a human case of WNV")
+    #
+    # flm.distribution.records = data.frame(model.name = this.model.name, forecast.id = model.forecast.id,
+    #                                       forecast.target = 'annual.human.cases',
+    #                                       UNIT = UNIT, date = date, year = year)
+    # # Add data columns to the new data frame. At present, this is just the point estimate repeated n.draws times
+    # #**# change when going from a point estimate to probabilisic estimates
+    # for (i in seq_len(n.draws)){
+    #   flm.distribution.records = cbind(flm.distribution.records, flm.results$predcases)
+    # }
+    # draw.names = sprintf("DRAW%s", seq(1,n.draws))
+    # colnames(flm.distribution.records) = c("model.name", "forecast.id", "forecast.target", "UNIT", "date", "year", draw.names)
+    # forecast.distributions = update.distribution2(forecast.distributions, flm.distribution.records)
   }
 
   # Make sure forecasts.targets are not converted to factor
@@ -2495,7 +2495,7 @@ check.week.id = function(week.id){
 #' @param out.pdf The pdf of plots to be generated
 #'
 #' @export
-plot.bins = function(cdc.bins, out.pdf){
+plotbins = function(cdc.bins, out.pdf){
   cdc.bins = cdc.bins[cdc.bins$type == "Bin", ] # Remove point estimates
 
   pdf(out.pdf)
@@ -2530,7 +2530,7 @@ plot.bins = function(cdc.bins, out.pdf){
 #'
 #' @export
 #'
-mean.min.max.table = function(forecast.distributions, outfile, n.draws){
+mean_min_max_table = function(forecast.distributions, outfile, n.draws){
 
   fips.lookup = wnvdata::fips.lookup
 
