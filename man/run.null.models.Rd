@@ -6,7 +6,7 @@
 \usage{
 run.null.models(forecast.targets, forecasts.df, forecast.distributions,
   human.data, week.id, weekinquestion, n.draws, point.estimate,
-  analysis.districts, mosq.data = NA, population.df = NA,
+  analysis.locations, mosq.data = NA, population.df = NA,
   model.name = "NULL.MODELS")
 }
 \arguments{
@@ -26,11 +26,11 @@ run.null.models(forecast.targets, forecasts.df, forecast.distributions,
 
 \item{point.estimate}{Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.}
 
-\item{analysis.districts}{Districts to include in the analysis. This may include districts with no human cases that would otherwise be dropped from the modeling.}
+\item{analysis.locations}{locations to include in the analysis. This may include locations with no human cases that would otherwise be dropped from the modeling.}
 
 \item{mosq.data}{Only required if a mosquito output is among the forecast targets. See \code{\link{dfmip.forecast}}}
 
-\item{population.df}{A data frame with districts (counties) and their populations. A column labeled SPATIAL should contain the county/district information, while population should be in a TOTAL_POPULATION column. Only required if incidence calculations are desired.}
+\item{population.df}{A data frame with locations (counties) and their populations. A column labeled SPATIAL should contain the county/location information, while population should be in a TOTAL_POPULATION column. Only required if incidence calculations are desired.}
 
 \item{model.name}{The name of the model to use in forecasts.df and forecast.distributions}
 }

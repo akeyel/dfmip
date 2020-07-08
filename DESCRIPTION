@@ -38,6 +38,7 @@ VignetteBuilder: knitr
 Remotes:
 	akeyel/rf1,
 	akeyel/ArboMAP,
+	akeyel/wnvdata,
 	khelmsmith/flm_NE_WNV
 Depends:
     R (>= 2.10)
@@ -51,6 +52,7 @@ Suggests:
     rf1,
     ArboMAP,
     flm,
+    wnvdata,
     knitr,
     rmarkdown,
     testthat (>= 2.1.0),

@@ -15,8 +15,8 @@ evaluate.accuracy(models.to.run, forecast.distributions, forecast.targets,
 
 \item{forecast.targets}{See \code{\link{dfmip.forecast}}}
 
-\item{observations.df}{A data frame with five fields: district, year, district_year, forecast.target, and value.
-Value contains the observed value for the district and year for the corresponding forecast.target}
+\item{observations.df}{A data frame with five fields: location, year, location_year, forecast.target, and value.
+Value contains the observed value for the location and year for the corresponding forecast.target}
 
 \item{n.draws}{See \code{\link{dfmip.forecast}}}
 
@@ -25,8 +25,8 @@ Value contains the observed value for the district and year for the correspondin
 \item{percentage}{For continuous and discrete forecasts, if the prediction is within the specified percentage of the observed value, the forecast is considered accurate. The default is +/- 25 percent of the observed.}
 }
 \value{
-accuracy.summary A data frame organized by model, district
-(and an aggregation across all districts, currently denoted -STATEWIDE, but this does not have to be a state),
+accuracy.summary A data frame organized by model, location
+(and an aggregation across all locations, currently denoted -STATEWIDE, but this does not have to be a state),
 forecast.target, with entries for the following evaluation metrics: CRPS, RMSE, Scaled_RMSE, percentage, threshold,
 percentage or threshold, and Area Under the Curve (AUC).
 }

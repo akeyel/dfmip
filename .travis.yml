@@ -1,6 +1,11 @@
 language: r
 cache: packages
 
+# Trying this
+#repos: 
+#  CRAN: https://cran.rstudio.com
+#  rforge: http://R-Forge.R-project.org
+
 addons:
   apt:
     packages:
@@ -8,8 +13,10 @@ addons:
       - gdal-bin
       - libgdal-dev
 
-r_binary_packages:
-  - rgdal
+#r_binary_packages:
+#  - rgdal
+before_install:
+- R -e 'install.packages("rgdal", repos=c("http://R-Forge.R-project.org", "http://cran.rstudio.com"))'
 
 r:
     - release
@@ -18,5 +25,7 @@ r:
 r_packages:
     - covr
 
+after_failure:
+ - ./travis-tool.sh dump_logs
 #after_success:
 #    - Rscript -e 'covr::codecov()'

@@ -15,6 +15,13 @@ NULL
 
 #**# Moved Generate Test Data function to junk.R.
 
+# Example needs fixing for assess.accuracy function. Was this the issue on TRAVIS? at the very least, it was filling the console!
+# #' @examples
+# #' mat = matrix(rnorm(1000, 8, 1), ncol = 1)
+# #' obs = rnorm(1000, 8, 1)
+# #' assess.accuracy(mat, obs, c("TEST"), c("Test"), c(2015), "seasonal.mosquito.MLE")
+
+
 #' Assess Accuracy
 #'
 #' High level handler function to decide which metrics to compute and then call
@@ -52,11 +59,6 @@ NULL
 #'   AUC \tab Area Under the Curve from the Receiver Operating Characteristic Plot\cr
 #'   }
 #'
-#' @examples
-#' mat = matrix(rnorm(1000, 8, 1), ncol = 1)
-#' obs = rnorm(1000, 8, 1)
-#' assess.accuracy(mat, obs, c("TEST"), c("Test"), c(2015), "seasonal.mosquito.MLE")
-#'
 #' @export assess.accuracy
 assess.accuracy = function(predictions.mat, observations.vec, model.vec, locations.vec, year.vec,
                            forecast.target, threshold = 'default', percentage = 'default'){
@@ -78,7 +80,7 @@ assess.accuracy = function(predictions.mat, observations.vec, model.vec, locatio
   }
 
   # Create a data frame to hold accuracy metric results
-  accuracy.metrics = data.frame(model = NA, district = NA, forecast.target, metric = NA, year = NA, value = NA)
+  accuracy.metrics = data.frame(model = NA, location = NA, forecast.target, metric = NA, year = NA, value = NA)
   #accuracy.metrics = list(CRPS = NA, RMSE = NA, Scaled_RMSE = NA, within_percentage = NA,
   #                        within_threshold = NA, within_threshold_or_percentage = NA, AUC = NA)
 

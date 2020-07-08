@@ -9,7 +9,7 @@ dfmip.hindcasts(forecast.targets, models.to.run, focal.years, human.data,
   population.df = "none", threshold = "default",
   percentage = "default", id.string = "", season_start_month = 7,
   weeks_in_season = 2, sample_frequency = 1, n.draws = 1000,
-  point.estimate = 0, analysis.districts = "default",
+  point.estimate = 0, analysis.locations = "default",
   is.test = FALSE)
 }
 \arguments{
@@ -28,10 +28,10 @@ regardless of the order specified in the models.to.run vector.}
 
 \item{focal.years}{The years for which hindcasts will be made. Hindcasts will use all prior years as training data.}
 
-\item{human.data}{Data on human cases of the disease. Must be formatted with two columns: district and date. The district column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case. The date column must be in format M/D/Y, with forward slashes as delimiters
+\item{human.data}{Data on human cases of the disease. Must be formatted with two columns: location and date. The location column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case. The date column must be in format M/D/Y, with forward slashes as delimiters
 #**# WHAT IF THESE DATA ARE MISSING? I.E. just making a mosquito forecast with RF1?}
 
-\item{mosq.data}{Data on mosquito pools tested for the disease. Must be formatted with 4 columns: district (the spatial unit, e.g. county), col_date: the date the mosquitoes were tested, wnv_result: whether or not the pool was positive, pool_size: the number of mosquitoes tested in the pool. A fifth column species is optional but is not used by the code}
+\item{mosq.data}{Data on mosquito pools tested for the disease. Must be formatted with 4 columns: location (the spatial unit, e.g. county), col_date: the date the mosquitoes were tested, wnv_result: whether or not the pool was positive, pool_size: the number of mosquitoes tested in the pool. A fifth column species is optional but is not used by the code}
 
 \item{weather.data}{Data on weather variables to be included in the analysis. See the read.weather.data function for details about data format.
 The read.weather.data function from ArboMAP is a useful way to process one or more data files downloaded via Google Earth Engine.}
@@ -60,7 +60,7 @@ rf1.inputs \tab Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}.\
 
 \item{point.estimate}{Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.}
 
-\item{analysis.districts}{Districts to include in the analysis. This may include districts with no human cases that would otherwise be dropped from the modeling.}
+\item{analysis.locations}{locations to include in the analysis. This may include locations with no human cases that would otherwise be dropped from the modeling.}
 
 \item{is.test}{Default is 0 (runs all models). If set to 1, saved results will be used for the Random Forest model. For testing purposes only.}
 }
@@ -72,10 +72,10 @@ Generate hindcasts for a suite of models using common data inputs, and evaluate 
 }
 \details{
 Forecast targets not yet supported, but in development: \tabular{ll}{
-human_incidence \tab Human cases divided by district population.\cr
+human_incidence \tab Human cases divided by location population.\cr
 peak_mosquito_MLE \tab Peak mosquito infection rate (maximum likelihood estimate) during the season (averaged over what time period?)\cr
-number_positive_pools \tab The number of positive mosquito pools observed by district\cr
-human_cases_binary \tab Whether or not human cases will occur in a district\cr
-positive_pools_binary \tab Whether or not a district will have any positive mosquito pools\cr
+number_positive_pools \tab The number of positive mosquito pools observed by location\cr
+human_cases_binary \tab Whether or not human cases will occur in a location\cr
+positive_pools_binary \tab Whether or not a location will have any positive mosquito pools\cr
 peak_timing \tab The week (day?) of the peak mosquito infection rate\cr}
 }

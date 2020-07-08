@@ -7,7 +7,7 @@
 dfmip.forecast(forecast.targets, models.to.run, human.data, mosq.data,
   weather.data, weekinquestion, week.id, results.path,
   model.inputs = list(), population.df = "none", n.draws = 1000,
-  point.estimate = 0, analysis.districts = "default",
+  point.estimate = 0, analysis.locations = "default",
   is.test = FALSE)
 }
 \arguments{
@@ -24,10 +24,10 @@ RF1_A \tab Random Forest model, all available inputs.\cr  }
 Note these entries are case-sensitive and are run by keyword, so run in a fixed order (NULL.MODELS, ArboMAP, ArboMAP.MOD, RF1_C, RF1_A),
 regardless of the order specified in the models.to.run vector.}
 
-\item{human.data}{Data on human cases of the disease. Must be formatted with two columns: district and date (in format M/D/Y, with forward slashes as delimiters). An optional 'year' column may also be present. If absent, it will be generated from the date column. The district column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case.
+\item{human.data}{Data on human cases of the disease. Must be formatted with two columns: location and date (in format M/D/Y, with forward slashes as delimiters). An optional 'year' column may also be present. If absent, it will be generated from the date column. The location column contains the spatial unit (typically county), while the date corresponds to the date of the onset of symptoms for the human case.
 #**# WHAT IF THESE DATA ARE MISSING? I.E. just making a mosquito forecast with RF1?}
 
-\item{mosq.data}{Data on mosquito pools tested for the disease. Must be formatted with 4 columns: district (the spatial unit, e.g. county), col_date: the date the mosquitoes were tested, wnv_result: whether or not the pool was positive, pool_size: the number of mosquitoes tested in the pool. A fifth column species is optional but is not used by the code}
+\item{mosq.data}{Data on mosquito pools tested for the disease. Must be formatted with 4 columns: location (the spatial unit, e.g. county), col_date: the date the mosquitoes were tested, wnv_result: whether or not the pool was positive, pool_size: the number of mosquitoes tested in the pool. A fifth column species is optional but is not used by the code}
 
 \item{weather.data}{Data on weather variables to be included in the analysis. See the read.weather.data function for details about data format.
 The read.weather.data function from ArboMAP is a useful way to process one or more data files downloaded via Google Earth Engine.}
@@ -48,7 +48,7 @@ rf1.inputs \tab Inputs specific to the RF1 model, see \code{\link{rf1.inputs}}.\
 
 \item{point.estimate}{Whether a single point estimate should be returned for forecast distributions representing the mean value. Otherwise past years are sampled at random.}
 
-\item{analysis.districts}{Districts to include in the analysis. This may include districts with no human cases that would otherwise be dropped from the modeling.}
+\item{analysis.locations}{locations to include in the analysis. This may include locations with no human cases that would otherwise be dropped from the modeling.}
 
 \item{is.test}{Default is FALSE (runs all models). If set to TRUE, saved results will be used for the Random Forest model. For testing purposes only.}
 }
@@ -82,5 +82,5 @@ ArboMAP Details: See \code{\link[ArboMAP]{ArboMAP}} for more details
 
 RF1 Details: See rf1 package: ?rf1
 
-Null models are at the scale of the state, but future updates aim to allow variation by district
+Null model uses historical probabilities.
 }
