@@ -1,7 +1,8 @@
 Package: dfmip
 Type: Package
 Title: Disease Forecast Model Intercomparison Project
-Version: 0.1.0
+Version: 0.2.0
+Date: 2021-06-28
 Authors@R: c(person("Alexander", "Keyel", role = c("aut", "cre"),
            email = "akeyel@albany.edu",
            comment = c(ORCID = "https://orcid.org/0000-0001-5256-6274")),
@@ -51,6 +52,7 @@ Imports:
 Suggests:
     rf1,
     ArboMAP,
+    MASS,
     flm,
     wnvdata,
     knitr,
