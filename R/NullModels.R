@@ -676,8 +676,10 @@ apply.negative.binomial = function(train.data, target.year, n.draws, draw.vec){
   n.years = length(unique(train.data$year))
   locations = unique(train.data$location)
 
-  out.df = data.frame(location = NA, target_year = NA)
-  for (i in 1:length(draw.vec)){  out.df[[draw.vec[i]]] = NA  }
+  # vectorized alternative that maintains n.draw samples
+  draw.lst <- as.list(rep(NA_real_, 100))
+  names(draw.lst) <- draw.vec
+  out.df = data.frame(location = NA, target_year = NA, draw.lst)
 
   for (j in 1:length(locations)){
     #for (j in 1:10){ # FOR TESTING PURPOSES
