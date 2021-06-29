@@ -507,6 +507,11 @@ apply.historical.null = function(train.data, target.year, n.draws, draw.vec){
   return(out.df)
 }
 
+#' Prior Year Null Model
+#'
+#' Null model that uses the previous year's number of cases for a
+#' county as the mean for this year
+#'
 #' @param train.data Training data to be used to calculate the mean values.
 #' Must have a location field with locations, and a count field with number of cases.
 #' @param target.year The year for the prediction. Included in the output data
@@ -596,6 +601,8 @@ apply.random.incidence = function(train.data, target.year, n.draws, draw.vec){
   return(out.df)
 }
 
+#' Stratified Random Incidence
+#'
 #' @param train.data Training data to be used to calculate the mean values.
 #' Must have a location field with locations, and a count field with number of cases.
 #' @param target.year The year for the prediction. Included in the output data
@@ -649,6 +656,9 @@ apply.stratified.incidence = function(train.data, target.year, n.draws, draw.vec
   return(out.df)
 }
 
+#' Negative Binomial
+#'
+#'
 #' @param train.data Training data to be used to calculate the mean values.
 #' Must have a location field with locations, and a count field with number of cases.
 #' @param target.year The year for the prediction. Included in the output data
