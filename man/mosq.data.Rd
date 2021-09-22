@@ -4,7 +4,9 @@
 \name{mosq.data}
 \alias{mosq.data}
 \title{Mosquito Data}
-\format{An object of class \code{data.frame} with 16274 rows and 5 columns.}
+\format{
+An object of class \code{data.frame} with 16274 rows and 5 columns.
+}
 \source{
 \url{https://www.github.com/Ecograph/ArboMAP/}
 }

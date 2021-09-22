@@ -4,9 +4,16 @@
 \alias{assess.accuracy}
 \title{Assess Accuracy}
 \usage{
-assess.accuracy(predictions.mat, observations.vec, model.vec,
-  locations.vec, year.vec, forecast.target, threshold = "default",
-  percentage = "default")
+assess.accuracy(
+  predictions.mat,
+  observations.vec,
+  model.vec,
+  locations.vec,
+  year.vec,
+  forecast.target,
+  threshold = "default",
+  percentage = "default"
+)
 }
 \arguments{
 \item{predictions.mat}{A matrix where each row corresponds to a separate

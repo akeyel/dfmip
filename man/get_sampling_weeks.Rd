@@ -4,8 +4,12 @@
 \alias{get_sampling_weeks}
 \title{Get Weeks to sample}
 \usage{
-get_sampling_weeks(year, season_start_month, weeks_in_season,
-  sample_frequency = 1)
+get_sampling_weeks(
+  year,
+  season_start_month,
+  weeks_in_season,
+  sample_frequency = 1
+)
 }
 \arguments{
 \item{year}{The year in question}

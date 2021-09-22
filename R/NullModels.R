@@ -454,7 +454,11 @@ apply.stratified.mean.null = function(train.data, target.year, n.draws, draw.vec
   return(out.df)
 }
 
-#' #**# FILL IN HERE
+#' Apply Historical Null
+#'
+#' Create a null model based on historical cases. This has the advantage of not
+#' assuming a specific distribution, but the disadvantage of not interpolating
+#' based on a distribution.
 #'
 #' @param train.data Training data to be used to calculate the mean values.
 #' Must have a location field with locations, and a count field with number of cases.
@@ -507,6 +511,10 @@ apply.historical.null = function(train.data, target.year, n.draws, draw.vec){
   return(out.df)
 }
 
+#' Apply Prior Year Null
+#'
+#' Use the prior year to predict the current year.
+#'
 #' @param train.data Training data to be used to calculate the mean values.
 #' Must have a location field with locations, and a count field with number of cases.
 #' @param target.year The year for the prediction. Included in the output data
@@ -596,6 +604,11 @@ apply.random.incidence = function(train.data, target.year, n.draws, draw.vec){
   return(out.df)
 }
 
+#' Apply Stratified Incidence
+#'
+#' Calculate incidence by county, then take random draws from the incidence based
+#' on county population.
+#'
 #' @param train.data Training data to be used to calculate the mean values.
 #' Must have a location field with locations, and a count field with number of cases.
 #' @param target.year The year for the prediction. Included in the output data
@@ -649,6 +662,12 @@ apply.stratified.incidence = function(train.data, target.year, n.draws, draw.vec
   return(out.df)
 }
 
+#' Apply a negative binomial model
+#'
+#' Fits a negative binomial based on historical cases. If there are not enough
+#' historical cases to fit a model, the historical cases are duplicated to
+#' enable a model fit.
+#'
 #' @param train.data Training data to be used to calculate the mean values.
 #' Must have a location field with locations, and a count field with number of cases.
 #' @param target.year The year for the prediction. Included in the output data

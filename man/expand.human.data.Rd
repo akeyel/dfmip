@@ -4,9 +4,13 @@
 \alias{expand.human.data}
 \title{Expand human data}
 \usage{
-expand.human.data(cases, arbitrary.date = "08-01",
-  case.field = "count", year.field = "year",
-  location.field = "location")
+expand.human.data(
+  cases,
+  arbitrary.date = "08-01",
+  case.field = "count",
+  year.field = "year",
+  location.field = "location"
+)
 }
 \arguments{
 \item{cases}{Human cases summarized by location and year}

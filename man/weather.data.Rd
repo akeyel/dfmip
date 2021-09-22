@@ -4,7 +4,9 @@
 \name{weather.data}
 \alias{weather.data}
 \title{Weather Data}
-\format{An object of class \code{data.frame} with 457908 rows and 11 columns.}
+\format{
+An object of class \code{data.frame} with 457908 rows and 11 columns.
+}
 \source{
 \url{https://www.github.com/Ecograph/ArboMAP/}
 }
