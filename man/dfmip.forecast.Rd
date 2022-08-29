@@ -4,11 +4,22 @@
 \alias{dfmip.forecast}
 \title{Disease Forecast Model Intercomparison Project (dfmip) Forecast}
 \usage{
-dfmip.forecast(forecast.targets, models.to.run, human.data, mosq.data,
-  weather.data, weekinquestion, week.id, results.path,
-  model.inputs = list(), population.df = "none", n.draws = 1000,
-  point.estimate = 0, analysis.locations = "default",
-  is.test = FALSE)
+dfmip.forecast(
+  forecast.targets,
+  models.to.run,
+  human.data,
+  mosq.data,
+  weather.data,
+  weekinquestion,
+  week.id,
+  results.path,
+  model.inputs = list(),
+  population.df = "none",
+  n.draws = 1000,
+  point.estimate = 0,
+  analysis.locations = "default",
+  is.test = FALSE
+)
 }
 \arguments{
 \item{forecast.targets}{The quantities for which hindcasts are to be made. Options are: \tabular{ll}{

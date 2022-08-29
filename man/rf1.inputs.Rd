@@ -4,11 +4,18 @@
 \name{rf1.inputs}
 \alias{rf1.inputs}
 \title{Random Forest Inputs}
-\format{An object of class \code{list} of length 9.}
+\format{
+An object of class \code{list} of length 9.
+}
 \usage{
 rf1.inputs
 }
 \description{
 Example inputs to facilitate running the random forest example
+
+
+}
+\details{
+
 }
 \keyword{datasets}

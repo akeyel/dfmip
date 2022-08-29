@@ -39,6 +39,203 @@
 #' HN \tab Historical Null\cr
 #' NB \tab Negative Binomial\cr
 #' AA \tab Always Absent\cr
+#' IN \tab Incidence\cr
+#' PI \tab Pooled Incidence\cr
+#' AR \tab Autoregressive 1\cr
+#' MV \tab Mean Value\cr
+#' PY \tab Prior Year\cr
+#' UN \tab Uniform Null\cr
+#' PM \tab Pooled Mean Value\cr }
+#'
+#'@param out.path The path to write the crps.df and time.df data objects.
+#' If no output is desired, set this to NA (default).
+#'@param in.seed The starting seed to ensure replicability of the random
+#'processes
+#'
+#'@return A list with four elements: crps.df; time.df; sample.size.vec, and a list
+#'of model specific results. crps df is a data
+#' frame with the average CRPS score for that year for each null model, while
+#' time.df contains the timing for each null model. sample.size.vec contains
+#' a list of sample sizes by year, while the model.lists object contains the
+#' individual county CRPS scores by year.
+#'
+#'@export apply.null.models.one.year
+#'
+apply.null.models.one.year = function(train.data, obs.data, n.draws, target.year,
+                                      nulls.vec = "ALL", out.path = NA, in.seed = 20210622){
+
+  if (nulls.vec == "ALL"){
+    nulls.vec = c("AA", "PV","MV", "HN", "PN", "PI", "IN", "UN", "NB", "AR")
+  }
+
+  # Check for required fields
+  check.fields(train.data, nulls.vec)
+
+  set.seed(in.seed)
+  draw.vec = sprintf("DRAW_%04.0f", seq(1,n.draws))
+
+  years = sort(as.numeric(unique(train.data$year)))
+
+  mean.crps.df = data.frame(model = "DROP", target.year = NA, CRPS = NA)
+  time.df = data.frame(model = "DROP", target.year = NA, start.time = NA, end.time = NA)
+  raw.crps.df = data.frame(model = "DROP", location = NA, count = NA, year = NA, CRPS = NA)
+  pred.df = data.frame(model = "DROP", location = NA, count = NA, year = NA)
+  for (i in 1:length(draw.vec)){
+    this.entry = draw.vec[i]
+    pred.df[[this.entry]] = NA
+  }
+
+  sample.size = nrow(train.data)
+
+  # Make sure train.data field is numeric
+  train.data$count = as.numeric(as.character(train.data$count))
+  train.data$year = as.numeric(as.character(train.data$year))
+
+  obs.data.count = obs.data$count
+  obs.data.loc = obs.data$location
+  n.records = length(obs.data.count)
+
+  for (this.null in nulls.vec){
+    null.start = Sys.time()
+    out.data = null.engine(this.null, train.data, n.draws, n.records, target.year)
+    null.end = Sys.time()
+    time.df = rbind(time.df, c(this.null, target.year, null.start, null.end))
+    out.data = matrix(out.data, ncol = n.draws)
+    out.crps = scoringRules::crps_sample(as.numeric(obs.data.count), as.matrix(out.data))
+    out.matrix = matrix(c(rep(this.null, n.records), obs.data.loc, obs.data.count, rep(target.year, n.records), out.crps),
+                        ncol = 5)
+    colnames(out.matrix) = c("model", "location", "count", "year", "CRPS")
+    raw.crps.df = rbind(raw.crps.df, out.matrix)
+
+    pred.matrix = matrix(c(rep(this.null, n.records), obs.data.loc, obs.data.count,
+                           rep(target.year, n.records), out.data), ncol = 4 + n.draws)
+    colnames(pred.matrix) = c('model', 'location', 'count', 'year', draw.vec)
+    pred.df = rbind(pred.df, pred.matrix)
+    mean.null.crps = mean(out.crps)
+    mean.crps.df = rbind(mean.crps.df, c(this.null, target.year, mean.null.crps))
+  }
+
+  # Remove initialization rows
+  mean.crps.df = mean.crps.df[2:nrow(mean.crps.df), ]
+  time.df = time.df[2:nrow(time.df), ]
+  mean.crps.df$CRPS = as.numeric(mean.crps.df$CRPS)
+  raw.crps.df = raw.crps.df[2:nrow(raw.crps.df), ]
+  pred.df = pred.df[2:nrow(pred.df), ]
+
+  time.df$TIME.DIFF = as.numeric(time.df$end.time) - as.numeric(time.df$start.time)
+
+
+  return(list(mean.crps.df, time.df, raw.crps.df, pred.df, sample.size))
+}
+
+#' Compute the null model results
+#'
+#' @param this.null an indicator for which null model to run: AA, PV, MV, HN, PN, PI, IN, UN, NB, AR
+#' @param train.data The training data to use for parameterizing the null model
+#' @param n.draws the number of draws from the resulting distribution to use
+#' @param n.records The number of locations being predicted
+#' @param year The focal forecast year
+#'
+#' @return a matrix with one row for each location and one column for each draw
+null.engine = function(this.null, train.data, n.draws, n.records, year){
+
+  if (this.null == "AA"){
+    out.data = rep(0, n.draws * n.records)
+  }
+
+  if (this.null == "PV"){
+    mean.value = mean(train.data$count)
+    out.data = rep(mean.value, n.draws * n.records)
+  }
+
+  if (this.null == "MV"){
+    sm.result = apply.stratified.mean.null(train.data, year, n.draws, draw.vec)
+    out.data.1 = sm.result[ ,3:ncol(sm.result)]
+    out.data = correct.out.data(out.data.1, n.draws)
+  }
+
+  if (this.null == "HN"){
+    hn.result = apply.historical.null(train.data, year, n.draws, draw.vec)
+    out.data.1 = hn.result[ ,3:ncol(hn.result)]
+    out.data = correct.out.data(out.data.1, n.draws)
+  }
+
+  if (this.null == "PN"){
+    pn.result = apply.prior.year.null(train.data, year, n.draws, draw.vec)
+    out.data.1 = pn.result[ ,3:ncol(pn.result)]
+    out.data = correct.out.data(out.data.1, n.draws)
+  }
+
+  if (this.null == "PI"){
+    ri.result = apply.random.incidence.v2(train.data, year, n.draws, draw.vec)
+    out.data.1 = ri.result[ ,3:ncol(ri.result)]
+    out.data = correct.out.data(out.data.1, n.draws)
+  }
+
+  if (this.null == "IN"){
+    si.result = apply.stratified.incidence.v2(train.data, year, n.draws, draw.vec) # target.year
+    out.data.1 = si.result[ ,3:ncol(si.result)]
+    out.data = correct.out.data(out.data.1, n.draws)
+  }
+
+  if (this.null == "UN"){
+    un.result = apply.uniform(train.data, year, n.draws, draw.vec)
+    out.data.1 = un.result[ ,3:ncol(un.result)]
+    out.data = correct.out.data(out.data.1, n.draws)
+  }
+
+  if (this.null == "NB"){
+    nb.result = apply.negative.binomial(train.data, year, n.draws, draw.vec)
+    out.data.1 = nb.result[ ,3:ncol(nb.result)]
+    out.data = correct.out.data(out.data.1, n.draws)
+  }
+
+  if (this.null == "AR"){
+    ar.result = apply.ar1(train.data, year, n.draws, draw.vec)
+    out.data.1 = ar.result[ ,3:ncol(ar.result)]
+    out.data = correct.out.data(out.data.1, n.draws)
+  }
+
+  return(out.data)
+}
+
+#' Correct out data
+#'
+#' Correct the data format coming out of the apply.X functions to be compatible
+#' with downstream code.
+#' @param out.data.1 A data matrix with a column for every draw, and a row for every location of interest.
+#' @param n.draws number of draws from distribution
+#'
+#' @return the same data matrix, but without some weird list formatting issues R was having.
+#'
+correct.out.data = function(out.data.1, n.draws){
+  # Add a correction for R's automated corruption of the data
+  out.data = c()
+  for (col in 1:n.draws){
+    out.data = c(out.data, out.data.1[[col]])
+  }
+  out.data = matrix(out.data, ncol = n.draws)
+
+  return(out.data)
+}
+
+#' Apply Null Models
+#'
+#' Runs the null models as a group and create an joint output data frame and a
+#' timing data frame. NOTE: the always absent and mean value were NOT calculated
+#' using the apply.always.absent.null function or the apply.mean.value.null
+#' functions - these were created later and have not been edited into the code.
+#'
+#'@param in.data A data set containing 'location' field with locations,
+#'annual human cases in a 'count' field, and year in a 'year' field. Note that
+#'field names must match EXACTLY. For Stratified Incidence and Random Incidence,
+#'human population also needs to be included in a 'POP' field.
+#'@param n.draws The number of probabilistic draws to make for each location.
+#'@param nulls Which null models to run. Default of "ALL" runs all models.
+#'Individual models can be run with 2-letter abbreviations in a vector:\tabular{ll}{
+#' HN \tab Historical Null\cr
+#' NB \tab Negative Binomial\cr
+#' AA \tab Always Absent\cr
 #' SI \tab Stratified Incidence\cr
 #' RI \tab Random Incidence\cr
 #' AR \tab Autoregressive 1\cr
@@ -315,10 +512,17 @@ apply.null.models = function(in.data, n.draws, nulls = "ALL", out.path = NA, in.
 #'
 check.fields = function(in.data, nulls){
   err.message = ""
+  data.error = 0
   loc.error = 0
   year.error = 0
   count.error = 0
   pop.error = 0
+
+  if (nrow(in.data) == 0){
+    data.error = 1
+    stop("Input data frame is empty!")
+  }
+
   if (length(in.data$location) == 0){
     loc.error = 1
     err.message = sprintf("%sLocation field is mispecified. Needs to be exactly 'location'\n", err.message)
@@ -454,7 +658,11 @@ apply.stratified.mean.null = function(train.data, target.year, n.draws, draw.vec
   return(out.df)
 }
 
-#' #**# FILL IN HERE
+#' Apply Historical Null
+#'
+#' Create a null model based on historical cases. This has the advantage of not
+#' assuming a specific distribution, but the disadvantage of not interpolating
+#' based on a distribution.
 #'
 #' @param train.data Training data to be used to calculate the mean values.
 #' Must have a location field with locations, and a count field with number of cases.
@@ -507,10 +715,9 @@ apply.historical.null = function(train.data, target.year, n.draws, draw.vec){
   return(out.df)
 }
 
-#' Prior Year Null Model
+#' Apply Prior Year Null
 #'
-#' Null model that uses the previous year's number of cases for a
-#' county as the mean for this year
+#' Use the prior year to predict the current year.
 #'
 #' @param train.data Training data to be used to calculate the mean values.
 #' Must have a location field with locations, and a count field with number of cases.
@@ -601,7 +808,10 @@ apply.random.incidence = function(train.data, target.year, n.draws, draw.vec){
   return(out.df)
 }
 
-#' Stratified Random Incidence
+#' Apply Stratified Incidence
+#'
+#' Calculate incidence by county, then take random draws from the incidence based
+#' on county population.
 #'
 #' @param train.data Training data to be used to calculate the mean values.
 #' Must have a location field with locations, and a count field with number of cases.
@@ -656,8 +866,107 @@ apply.stratified.incidence = function(train.data, target.year, n.draws, draw.vec
   return(out.df)
 }
 
-#' Negative Binomial
+#' Pooled Uniform Random Incidence (updated)
 #'
+#' Uses population data for prior year
+#'
+#' @param train.data Training data to be used to calculate the mean values.
+#' Must have a location field with locations, and a count field with number of cases.
+#' @param target.year The year for the prediction. Included in the output data
+#' frame to indicate the target year, but otherwise unused
+#' @param n.draws The number of probabilistic draws to include in the data matrix.
+#' Retained here only for consistency in formatting with the probabilistic methods.
+#' @param draw.vec A vector of column names for the probabilistic draws.
+#'
+#' @return out.df A data frame containing the predictions for each location for the target year
+#'
+#' @export apply.random.incidence
+apply.random.incidence.v2 = function(train.data, target.year, n.draws, draw.vec,
+                                     use.current = 0){
+
+  # Calculate US-wide incidence
+  n.years = length(unique(train.data$year))
+  cases.per.year = sum(train.data$count) / n.years
+  total.population = sum(train.data$POP[train.data$year == (target.year - 1)]) # Pull population from previous year
+  incidence = cases.per.year / total.population
+
+  locations = unique(train.data$location)
+
+  out.df = data.frame(location = NA, target_year = NA)
+  for (i in 1:length(draw.vec)){  out.df[[draw.vec[i]]] = NA  }
+
+  for (j in 1:length(locations)){
+    location = locations[j]
+    pop = train.data$POP[train.data$location == location & train.data$year == (target.year - 1)]
+
+    distribution.samples = rbinom(n.draws, pop, incidence)
+    this.record = c(location, target.year, distribution.samples)
+    out.df = rbind(out.df, this.record)
+  }
+
+  for (k in 3:ncol(out.df)){
+    out.df[ ,k] = as.numeric(out.df[ ,k])
+  }
+
+  # Return out.df without the initialization row
+  out.df = out.df[2:nrow(out.df), ]
+  return(out.df)
+}
+
+#' Apply Stratified Incidence (updated)
+#'
+#' Calculate incidence by county, then take random draws from the incidence based
+#' on county population.
+#'
+#' @param train.data Training data to be used to calculate the mean values.
+#' Must have a location field with locations, and a count field with number of cases.
+#' @param target.year The year for the prediction. Included in the output data
+#' frame to indicate the target year, but otherwise unused
+#' @param n.draws The number of probabilistic draws to include in the data matrix.
+#' Retained here only for consistency in formatting with the probabilistic methods.
+#' @param draw.vec A vector of column names for the probabilistic draws.
+#'
+#' @return out.df A data frame containing the predictions for each location for the target year
+#'
+#' @export apply.stratified.incidence
+apply.stratified.incidence.v2 = function(train.data, target.year, n.draws, draw.vec){
+
+  n.years = length(unique(train.data$year))
+  locations = unique(train.data$location)
+
+  out.df = data.frame(location = NA, target_year = NA)
+  for (i in 1:length(draw.vec)){  out.df[[draw.vec[i]]] = NA  }
+
+  for (j in 1:length(locations)){
+    location = locations[j]
+    loc.subset = train.data[train.data$location == location, ]
+
+    cases.per.year = sum(loc.subset$count) / n.years
+    loc.population = sum(loc.subset$POP[loc.subset$year == (target.year - 1)]) # Pull population from previous year
+    incidence = cases.per.year / loc.population
+
+    distribution.samples = rbinom(n.draws, loc.population, incidence)
+
+    this.record = c(location, target.year, distribution.samples)
+    out.df = rbind(out.df, this.record)
+  }
+
+  for (k in 3:ncol(out.df)){
+    out.df[ ,k] = as.numeric(out.df[ ,k])
+  }
+
+  # Return out.df without the initialization row
+  out.df = out.df[2:nrow(out.df), ]
+  return(out.df)
+}
+
+
+#' Apply a negative binomial model
+#'
+#' Fits a negative binomial based on historical cases. If there are not enough
+#' historical cases to fit a model, the historical cases are duplicated to
+#' enable a model fit.
+>>>>>>> districts
 #'
 #' @param train.data Training data to be used to calculate the mean values.
 #' Must have a location field with locations, and a count field with number of cases.

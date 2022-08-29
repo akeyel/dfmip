@@ -4,7 +4,9 @@
 \name{human.data}
 \alias{human.data}
 \title{Human Data}
-\format{An object of class \code{data.frame} with 1326 rows and 2 columns.}
+\format{
+An object of class \code{data.frame} with 1326 rows and 2 columns.
+}
 \source{
 \url{https://www.github.com/Ecograph/ArboMAP/}
 }

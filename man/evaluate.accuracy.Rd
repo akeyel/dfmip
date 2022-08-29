@@ -4,9 +4,15 @@
 \alias{evaluate.accuracy}
 \title{Evaluate accuracy}
 \usage{
-evaluate.accuracy(models.to.run, forecast.distributions, forecast.targets,
-  observations.df, n.draws, threshold = "default",
-  percentage = "default")
+evaluate.accuracy(
+  models.to.run,
+  forecast.distributions,
+  forecast.targets,
+  observations.df,
+  n.draws,
+  threshold = "default",
+  percentage = "default"
+)
 }
 \arguments{
 \item{models.to.run}{See \code{\link{dfmip.forecast}}}

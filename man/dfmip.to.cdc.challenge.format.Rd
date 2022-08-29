@@ -4,9 +4,13 @@
 \alias{dfmip.to.cdc.challenge.format}
 \title{Convert to CDC Forecast Challenge}
 \usage{
-dfmip.to.cdc.challenge.format(model.name, forecast.distributions, out.file,
-  n.draws, bins = c(0, 1, 6, 11, 16, 21, 26, 31, 36, 41, 46, 51, 101,
-  151, 201, 1000))
+dfmip.to.cdc.challenge.format(
+  model.name,
+  forecast.distributions,
+  out.file,
+  n.draws,
+  bins = c(0, 1, 6, 11, 16, 21, 26, 31, 36, 41, 46, 51, 101, 151, 201, 1000)
+)
 }
 \arguments{
 \item{model.name}{The name of the model results to subset from the forecast.distributions object}

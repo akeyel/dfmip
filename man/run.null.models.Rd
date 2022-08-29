@@ -4,10 +4,20 @@
 \alias{run.null.models}
 \title{Generate null models based on mean values}
 \usage{
-run.null.models(forecast.targets, forecasts.df, forecast.distributions,
-  human.data, week.id, weekinquestion, n.draws, point.estimate,
-  analysis.locations, mosq.data = NA, population.df = NA,
-  model.name = "NULL.MODELS")
+run.null.models(
+  forecast.targets,
+  forecasts.df,
+  forecast.distributions,
+  human.data,
+  week.id,
+  weekinquestion,
+  n.draws,
+  point.estimate,
+  analysis.locations,
+  mosq.data = NA,
+  population.df = NA,
+  model.name = "NULL.MODELS"
+)
 }
 \arguments{
 \item{forecast.targets}{See \code{\link{dfmip.forecast}}}

@@ -3,7 +3,6 @@
 \docType{package}
 \name{dfmip}
 \alias{dfmip}
-\alias{dfmip-package}
 \title{dfmip: Disease Forecast Model Inter-comparison Project package}
 \description{
 dfmip runs multiple disease forecasting models for the purpose of

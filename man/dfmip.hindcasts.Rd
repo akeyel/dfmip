@@ -4,13 +4,27 @@
 \alias{dfmip.hindcasts}
 \title{DFMIP Hindcasts}
 \usage{
-dfmip.hindcasts(forecast.targets, models.to.run, focal.years, human.data,
-  mosq.data, weather.data, results.path, model.inputs = list(),
-  population.df = "none", threshold = "default",
-  percentage = "default", id.string = "", season_start_month = 7,
-  weeks_in_season = 2, sample_frequency = 1, n.draws = 1000,
-  point.estimate = 0, analysis.locations = "default",
-  is.test = FALSE)
+dfmip.hindcasts(
+  forecast.targets,
+  models.to.run,
+  focal.years,
+  human.data,
+  mosq.data,
+  weather.data,
+  results.path,
+  model.inputs = list(),
+  population.df = "none",
+  threshold = "default",
+  percentage = "default",
+  id.string = "",
+  season_start_month = 7,
+  weeks_in_season = 2,
+  sample_frequency = 1,
+  n.draws = 1000,
+  point.estimate = 0,
+  analysis.locations = "default",
+  is.test = FALSE
+)
 }
 \arguments{
 \item{forecast.targets}{The quantities for which hindcasts are to be made. Options are: \tabular{ll}{
